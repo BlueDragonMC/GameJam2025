@@ -1,10 +1,10 @@
 package com.bluedragonmc.example.server
 
-import com.bluedragonmc.example.game.ExampleGame
 import com.bluedragonmc.example.server.impl.DatabaseConnectionStub
 import com.bluedragonmc.example.server.impl.EnvironmentStub
 import com.bluedragonmc.example.server.impl.PermissionManagerStub
 import com.bluedragonmc.example.server.impl.SingleGameQueue
+import com.bluedragonmc.games.firefighters.FirefightersGame
 import com.bluedragonmc.server.BRAND_COLOR_PRIMARY_1
 import com.bluedragonmc.server.CustomPlayer
 import com.bluedragonmc.server.api.Environment
@@ -20,7 +20,7 @@ import net.minestom.server.event.player.PlayerSpawnEvent
 import net.minestom.server.extras.MojangAuth
 import net.minestom.server.tag.Tag
 
-val GAME_CLASS = ExampleGame::class
+val GAME_CLASS = FirefightersGame::class
 /** The name of the map folder in worlds/gameName/ */
 const val MAP_NAME = "Sandstone"
 const val SERVER_ADDRESS = "0.0.0.0"
