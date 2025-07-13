@@ -14,7 +14,9 @@ import com.bluedragonmc.server.module.instance.InstanceTimeModule
 import com.bluedragonmc.server.module.map.AnvilFileMapProviderModule
 import com.bluedragonmc.server.module.minigame.*
 import com.bluedragonmc.server.module.vanilla.*
+import com.bluedragonmc.server.utils.noItalic
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import net.minestom.server.MinecraftServer
 import net.minestom.server.entity.GameMode
 import net.minestom.server.event.player.PlayerBlockInteractEvent
@@ -87,7 +89,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
     }
 
     private companion object {
-        val FLAMETHROWER = SprayItem(ItemStack.of(Material.BLAZE_ROD), SprayItem.SprayItemType.FIRE_SPREAD)
-        val EXTINGUISHER = SprayItem(ItemStack.of(Material.GLOW_INK_SAC), SprayItem.SprayItemType.FIRE_EXTINGUISH)
+        val FLAMETHROWER = SprayItem(ItemStack.builder(Material.BLAZE_ROD).customName(Component.translatable("item.flamethrower", NamedTextColor.DARK_RED).noItalic()).build(), SprayItem.SprayItemType.FIRE_SPREAD)
+        val EXTINGUISHER = SprayItem(ItemStack.builder(Material.GLOW_INK_SAC).customName(Component.translatable("item.extinguisher", NamedTextColor.DARK_AQUA).noItalic()).build(), SprayItem.SprayItemType.FIRE_EXTINGUISH)
     }
 }
