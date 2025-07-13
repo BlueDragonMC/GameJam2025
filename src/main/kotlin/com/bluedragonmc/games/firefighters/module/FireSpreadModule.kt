@@ -3,6 +3,7 @@ package com.bluedragonmc.games.firefighters.module
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.module.GameModule
 import net.kyori.adventure.key.Key
+import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.coordinate.Point
 import net.minestom.server.event.Event
@@ -103,17 +104,24 @@ class FireSpreadModule : GameModule() {
             super.tick(tick)
 
             if (tries >= FIRE_SPREAD_TRIES) {
-                tick.instance.setBlock(
-                    tick.blockPosition,
-                    tick.block.withHandler(BlockHandler.Dummy.get(KEY.asString()))
-                )
+                MinecraftServer.getSchedulerManager().scheduleNextTick {
+                    // ^ We need to run this at the start of the next tick so that we're not mutating the tickable block handlers as they're being iterated over (see DynamicChunk#tick)
+                    tick.instance.setBlock(
+                        tick.blockPosition,
+                        tick.block.withHandler(BlockHandler.Dummy.get(KEY.asString()))
+                    )
+                }
                 return
             }
 
             if (Random.nextDouble() < FIRE_SPREAD_CHANCE) {
                 tries++
                 val adjacentPos = findAdjacentBlock(tick.instance, tick.blockPosition) ?: return
-                setFire(tick.instance, adjacentPos)
+
+                MinecraftServer.getSchedulerManager().scheduleNextTick {
+                    // ^ We need to run this at the start of the next tick so that we're not mutating the tickable block handlers as they're being iterated over (see DynamicChunk#tick)
+                    setFire(tick.instance, adjacentPos)
+                }
             }
         }
 
