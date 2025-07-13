@@ -1,6 +1,7 @@
 package com.bluedragonmc.games.firefighters.item
 
 import com.bluedragonmc.games.firefighters.module.CustomItem
+import com.bluedragonmc.games.firefighters.module.FireSpreadModule
 import com.bluedragonmc.server.utils.toVec
 import net.minestom.server.coordinate.Point
 import net.minestom.server.coordinate.Pos
@@ -31,7 +32,7 @@ class SprayItem(override val item: ItemStack, private val sprayItemType: SprayIt
 
     private fun spray(instance: Instance, startPos: Pos, playerVelocity: Point) {
         val lookDirection = startPos.direction()
-        for (i in 0 .. SPRAY_PARTICLE_COUNT) {
+        repeat(SPRAY_PARTICLE_COUNT) {
             instance.sendGroupedPacket(
                 ParticlePacket(
                     sprayItemType.particle,
@@ -44,8 +45,8 @@ class SprayItem(override val item: ItemStack, private val sprayItemType: SprayIt
         }
 
         // Raycast, placing or putting our fires in front of the player
-        val targetBlockPos = getTargetBlockPosition(instance, startPos, MAX_SPRAY_DISTANCE) ?: return
-        val targetBlock = instance.getBlock(targetBlockPos)
+        val (closestAirBlockPos, targetBlockPos) = getTargetBlockPosition(instance, startPos, MAX_SPRAY_DISTANCE) ?: return
+        val targetBlock = instance.getBlock(targetBlockPos, Block.Getter.Condition.TYPE)
         when (sprayItemType) {
             SprayItemType.FIRE_EXTINGUISH -> {
                 if (targetBlock.compare(Block.FIRE)) {
@@ -54,8 +55,8 @@ class SprayItem(override val item: ItemStack, private val sprayItemType: SprayIt
             }
             SprayItemType.FIRE_SPREAD -> {
                 if (targetBlock.compare(Block.FIRE)) return
-                instance.setBlock(targetBlockPos, Block.FIRE) // TODO put it in the actual right spot
-                // ^ you should set it to an air block
+                if (!FireSpreadModule.hasFullAdjacentFace(instance, closestAirBlockPos ?: return)) return
+                instance.setBlock(closestAirBlockPos, Block.FIRE)
             }
         }
     }
@@ -65,11 +66,13 @@ class SprayItem(override val item: ItemStack, private val sprayItemType: SprayIt
         private const val MAX_SPRAY_PARTICLE_SPEED = 0.6f
         private const val SPRAY_PARTICLE_COUNT = 20
 
-        fun getTargetBlockPosition(instance: Instance, startPos: Pos, maxDistance: Double): Point? {
+        fun getTargetBlockPosition(instance: Instance, startPos: Pos, maxDistance: Double): Pair<Point?, Point>? {
             val it = BlockIterator(startPos.toVec(), startPos.direction(), 0.0, maxDistance)
+            var prev: Point? = null
             while (it.hasNext()) {
                 val position = it.next()
-                if (!instance.getBlock(position).isAir) return position
+                if (!instance.getBlock(position).isAir) return prev to position
+                prev = position
             }
             return null
         }

@@ -78,7 +78,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                         Block.Getter.Condition.TYPE
                     ).isAir && FireSpreadModule.hasFullAdjacentFace(event.instance, blockPos)
                 ) {
-                    FireSpreadModule.setFire(event.instance, blockPos)
+                    event.instance.setBlock(blockPos, Block.FIRE)
                 }
             }
         }
