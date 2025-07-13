@@ -2,6 +2,7 @@ package com.bluedragonmc.games.firefighters
 
 import com.bluedragonmc.games.firefighters.item.SprayItem
 import com.bluedragonmc.games.firefighters.module.CustomItemsModule
+import com.bluedragonmc.games.firefighters.module.FireSpreadModule
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.event.PlayerJoinGameEvent
 import com.bluedragonmc.server.module.combat.OldCombatModule
@@ -53,6 +54,14 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             MinecraftServer.getSchedulerManager().scheduleNextTick {
                 event.player.inventory.addItemStack(FLAMETHROWER.item)
                 event.player.inventory.addItemStack(EXTINGUISHER.item)
+            }
+        }
+
+        use(FireSpreadModule())
+
+        onGameStart {
+            for (player in players) {
+                player.inventory.addItemStack(ItemStack.of(Material.FLINT_AND_STEEL))
             }
         }
     }
