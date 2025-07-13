@@ -3,6 +3,7 @@ package com.bluedragonmc.games.firefighters
 import com.bluedragonmc.games.firefighters.item.SprayItem
 import com.bluedragonmc.games.firefighters.module.CustomItemsModule
 import com.bluedragonmc.games.firefighters.module.FireSpreadModule
+import com.bluedragonmc.games.firefighters.module.add
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.event.PlayerJoinGameEvent
 import com.bluedragonmc.server.module.combat.OldCombatModule
@@ -16,6 +17,8 @@ import com.bluedragonmc.server.module.vanilla.*
 import net.kyori.adventure.text.Component
 import net.minestom.server.MinecraftServer
 import net.minestom.server.entity.GameMode
+import net.minestom.server.event.player.PlayerBlockInteractEvent
+import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
 import java.nio.file.Paths
@@ -39,7 +42,14 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         use(SidebarModule(name))
         use(SpawnpointModule(SpawnpointModule.ConfigSpawnpointProvider()))
         use(SpectatorModule(spectateOnDeath = false, spectateOnLeave = true))
-        use(TeamModule(autoTeams = true, autoTeamMode = TeamModule.AutoTeamMode.TEAM_COUNT, autoTeamCount = 2, allowFriendlyFire = false))
+        use(
+            TeamModule(
+                autoTeams = true,
+                autoTeamMode = TeamModule.AutoTeamMode.TEAM_COUNT,
+                autoTeamCount = 2,
+                allowFriendlyFire = false
+            )
+        )
         use(TimedRespawnModule(seconds = 5))
         use(VoidDeathModule(threshold = 0.0))
 //        use(VoteStartModule(minPlayers = 1, countdownSeconds = 5))
@@ -54,16 +64,26 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             MinecraftServer.getSchedulerManager().scheduleNextTick {
                 event.player.inventory.addItemStack(FLAMETHROWER.item)
                 event.player.inventory.addItemStack(EXTINGUISHER.item)
+                event.player.inventory.addItemStack(ItemStack.of(Material.FLINT_AND_STEEL))
+            }
+        }
+
+        handleEvent<PlayerBlockInteractEvent> { event ->
+            if (event.isBlockingItemUse) return@handleEvent
+            if (event.player.getItemInHand(event.hand).material() == Material.FLINT_AND_STEEL) {
+                val direction = event.blockFace.toDirection()
+                val blockPos = event.blockPosition.add(direction)
+                if (event.instance.getBlock(
+                        blockPos,
+                        Block.Getter.Condition.TYPE
+                    ).isAir && FireSpreadModule.hasFullAdjacentFace(event.instance, blockPos)
+                ) {
+                    FireSpreadModule.setFire(event.instance, blockPos)
+                }
             }
         }
 
         use(FireSpreadModule())
-
-        onGameStart {
-            for (player in players) {
-                player.inventory.addItemStack(ItemStack.of(Material.FLINT_AND_STEEL))
-            }
-        }
     }
 
     private companion object {

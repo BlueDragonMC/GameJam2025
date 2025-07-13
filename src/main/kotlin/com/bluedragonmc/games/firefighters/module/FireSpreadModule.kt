@@ -7,12 +7,11 @@ import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.coordinate.Point
 import net.minestom.server.event.Event
 import net.minestom.server.event.EventNode
-import net.minestom.server.event.player.PlayerBlockInteractEvent
+import net.minestom.server.event.instance.InstanceBlockUpdateEvent
 import net.minestom.server.instance.Instance
 import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.block.BlockFace
 import net.minestom.server.instance.block.BlockHandler
-import net.minestom.server.item.Material
 import net.minestom.server.utils.Direction
 import kotlin.random.Random
 
@@ -24,20 +23,15 @@ class FireSpreadModule : GameModule() {
         parent: Game,
         eventNode: EventNode<Event>
     ) {
-        eventNode.addListener(PlayerBlockInteractEvent::class.java) { event ->
-            if (event.isBlockingItemUse) return@addListener
-            if (event.player.getItemInHand(event.hand).material() == Material.FLINT_AND_STEEL) {
-                val direction = event.blockFace.toDirection()
-                val blockPos = event.blockPosition.add(direction)
-                if (event.instance.getBlock(blockPos).isAir && hasFullAdjacentFace(event.instance, blockPos)) {
-                    setFire(event.instance, blockPos)
-                }
+        eventNode.addListener(InstanceBlockUpdateEvent::class.java) { event ->
+            if (event.block.compare(Block.FIRE) && event.block.handler() == null) {
+                    setFire(event.instance, event.blockPosition)
             }
         }
     }
 
     companion object {
-        private fun setFire(instance: Instance, pos: Point): Boolean {
+        fun setFire(instance: Instance, pos: Point): Boolean {
             val properties = mutableMapOf<String, String>()
 
             // Show fire on adjacent blocks if the block below won't fully connect with the fire below
@@ -66,9 +60,9 @@ class FireSpreadModule : GameModule() {
             return true
         }
 
-        private fun hasFullAdjacentFace(instance: Instance, pos: Point): Boolean {
+        fun hasFullAdjacentFace(instance: Instance, pos: Point): Boolean {
             for (direction in Direction.entries) {
-                if (instance.getBlock(pos.add(direction)).registry().collisionShape()
+                if (instance.getBlock(pos.add(direction), Block.Getter.Condition.TYPE).registry().collisionShape()
                         .isFaceFull(BlockFace.fromDirection(direction.opposite()))
                 ) {
                     return true
@@ -109,7 +103,10 @@ class FireSpreadModule : GameModule() {
             super.tick(tick)
 
             if (tries >= FIRE_SPREAD_TRIES) {
-                tick.instance.setBlock(tick.blockPosition, tick.block.withHandler(null))
+                tick.instance.setBlock(
+                    tick.blockPosition,
+                    tick.block.withHandler(BlockHandler.Dummy.get(KEY.asString()))
+                )
                 return
             }
 
@@ -124,7 +121,7 @@ class FireSpreadModule : GameModule() {
             val seed = (pos.x() + pos.y() + pos.z()).toInt() % FIRE_SPREAD_DIRECTIONS.size
             for (direction in FIRE_SPREAD_DIRECTIONS.iterateStartingAt(seed)) {
                 val adjacentPos = pos.add(direction)
-                if (instance.getBlock(adjacentPos).isAir &&
+                if (instance.getBlock(adjacentPos, Block.Getter.Condition.TYPE).isAir &&
                     hasFullAdjacentFace(instance, adjacentPos)
                 ) {
                     return adjacentPos
@@ -137,9 +134,14 @@ class FireSpreadModule : GameModule() {
     }
 }
 
-fun <T> Array<T>.iterateStartingAt(start: Int): Iterator<T> {
+private fun <T> Array<T>.iterateStartingAt(start: Int): Iterator<T> {
+
+    if (start !in 0..<size) {
+        throw ArrayIndexOutOfBoundsException()
+    }
 
     var current = start
+    var hitStart = false
     var finished = false
 
     return object : Iterator<T> {
@@ -153,12 +155,15 @@ fun <T> Array<T>.iterateStartingAt(start: Int): Iterator<T> {
         }
 
         override fun hasNext(): Boolean {
-            if (current + 1 == start) {
-                finished = true
-                return false
+            if (current == start) {
+                if (!hitStart) {
+                    hitStart = true
+                } else {
+                    finished = true
+                    return false
+                }
             }
             return !finished
         }
-
     }
 }
