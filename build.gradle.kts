@@ -16,7 +16,7 @@ dependencies {
         exclude(group = "org.tinylog")
     }
     implementation("net.kyori:adventure-text-minimessage:4.11.0")
-    implementation("net.minestom:minestom:2025.07.10-1.21.7")
+    implementation("net.minestom:minestom:2025.07.11-1.21.7")
     implementation("org.spongepowered:configurate-yaml:4.1.2")
 
     implementation("ch.qos.logback:logback-classic:1.4.12")
