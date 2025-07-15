@@ -1,6 +1,7 @@
 package com.bluedragonmc.games.firefighters
 
 import com.bluedragonmc.games.firefighters.item.SprayItem
+import com.bluedragonmc.games.firefighters.module.BurnableRegionsModule
 import com.bluedragonmc.games.firefighters.module.CustomItemsModule
 import com.bluedragonmc.games.firefighters.module.FireSpreadModule
 import com.bluedragonmc.games.firefighters.module.add
@@ -14,11 +15,15 @@ import com.bluedragonmc.server.module.instance.InstanceTimeModule
 import com.bluedragonmc.server.module.map.AnvilFileMapProviderModule
 import com.bluedragonmc.server.module.minigame.*
 import com.bluedragonmc.server.module.vanilla.*
+import com.bluedragonmc.server.utils.GameState
+import com.bluedragonmc.server.utils.miniMessage
 import com.bluedragonmc.server.utils.noItalic
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.minestom.server.MinecraftServer
+import net.minestom.server.component.DataComponents
 import net.minestom.server.entity.GameMode
+import net.minestom.server.event.instance.InstanceTickEvent
 import net.minestom.server.event.player.PlayerBlockInteractEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
@@ -86,6 +91,22 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         }
 
         use(FireSpreadModule())
+        use(BurnableRegionsModule()) { regions ->
+            val binding = getModule<SidebarModule>().bind { player ->
+                if (state != GameState.INGAME) return@bind getStatusSection()
+                val phase = (getInstance().worldAge % 20L) / 20.0
+                val colors = "#a10000:#ea2300:#ff8100:#f25500:#d80000"
+                val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>BURN STATUS")
+                listOf(getSpacer(), title) + regions.getScoreboardText() + getSpacer()
+            }
+
+            handleEvent<InstanceTickEvent> { event ->
+                if (event.instance.worldAge % 3L == 0L) {
+                    // Update scoreboard ~7x per second for the "Burn status" title animation
+                    binding.update()
+                }
+            }
+        }
     }
 
     private companion object {
