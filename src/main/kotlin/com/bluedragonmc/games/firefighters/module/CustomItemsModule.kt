@@ -8,6 +8,7 @@ import net.minestom.server.event.EventNode
 import net.minestom.server.event.player.PlayerUseItemEvent
 import net.minestom.server.event.player.PlayerUseItemOnBlockEvent
 import net.minestom.server.item.ItemStack
+import net.minestom.server.tag.Tag
 
 class CustomItemsModule : GameModule() {
     private val items = mutableListOf<CustomItem>()
@@ -15,13 +16,13 @@ class CustomItemsModule : GameModule() {
         eventNode.addListener(PlayerUseItemEvent::class.java) { event ->
             if (event.player.gameMode == GameMode.SPECTATOR) return@addListener
             for (item in items) {
-                if (event.itemStack.isSimilar(item.item)) item.onUseAir(event)
+                if (item.matches(event.itemStack)) item.onUseAir(event)
             }
         }
         eventNode.addListener(PlayerUseItemOnBlockEvent::class.java) { event ->
             if (event.player.gameMode == GameMode.SPECTATOR) return@addListener
             for (item in items) {
-                if (event.itemStack.isSimilar(item.item)) item.onUseBlock(event)
+                if (item.matches(event.itemStack)) item.onUseBlock(event)
             }
         }
     }
@@ -32,7 +33,19 @@ class CustomItemsModule : GameModule() {
 }
 
 interface CustomItem {
-    val item: ItemStack
+    val itemId: String
     fun onUseAir(event: PlayerUseItemEvent) {}
     fun onUseBlock(event: PlayerUseItemOnBlockEvent) {}
+
+    fun addIdentifier(itemStack: ItemStack): ItemStack {
+        return itemStack.withTag(CUSTOM_ITEM_TAG, itemId)
+    }
+
+    fun matches(itemStack: ItemStack): Boolean {
+        return itemStack.getTag(CUSTOM_ITEM_TAG) == itemId
+    }
+
+    companion object {
+        private val CUSTOM_ITEM_TAG = Tag.String("bluedragonmc:item")
+    }
 }

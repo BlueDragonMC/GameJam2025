@@ -4,6 +4,7 @@ import com.bluedragonmc.games.firefighters.module.CustomItem
 import com.bluedragonmc.games.firefighters.module.FireSpreadModule
 import com.bluedragonmc.server.utils.toVec
 import net.minestom.server.MinecraftServer
+import net.minestom.server.component.DataComponents
 import net.minestom.server.coordinate.Point
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.entity.Player
@@ -18,7 +19,11 @@ import net.minestom.server.utils.block.BlockIterator
 import java.time.Duration
 import kotlin.random.Random
 
-class SprayItem(override val item: ItemStack, private val sprayItemType: SprayItemType) : CustomItem {
+class SprayItem(override val itemId: String, item: ItemStack, private val sprayItemType: SprayItemType) :
+    CustomItem {
+
+    val item = addIdentifier(item)
+
     enum class SprayItemType(val particle: Particle) {
         FIRE_EXTINGUISH(Particle.CLOUD),
         FIRE_SPREAD(Particle.FLAME),
@@ -33,6 +38,18 @@ class SprayItem(override val item: ItemStack, private val sprayItemType: SprayIt
     }
 
     private fun spray(player: Player) {
+
+        val damage = player.itemInMainHand.get(DataComponents.DAMAGE, 0)
+
+        if (damage > item.get(DataComponents.MAX_DAMAGE, Integer.MAX_VALUE)) {
+            return
+        }
+
+        player.itemInMainHand = player.itemInMainHand.with(
+            DataComponents.DAMAGE,
+            damage + SPRAYS_PER_ACTION
+        )
+
         repeat(SPRAYS_PER_ACTION) { i ->
             MinecraftServer.getSchedulerManager().buildTask {
                 val instance = player.instance
@@ -52,7 +69,7 @@ class SprayItem(override val item: ItemStack, private val sprayItemType: SprayIt
                     )
                 }
 
-                // Raycast, placing or putting our fires in front of the player
+                // Raycast, placing or putting out fires in front of the player
                 val (closestAirBlockPos, targetBlockPos) = getTargetBlockPosition(
                     instance,
                     startPos,
@@ -69,7 +86,11 @@ class SprayItem(override val item: ItemStack, private val sprayItemType: SprayIt
 
                     SprayItemType.FIRE_SPREAD -> {
                         if (targetBlock.compare(Block.FIRE)) return@buildTask
-                        if (!FireSpreadModule.hasFullAdjacentFace(instance, closestAirBlockPos ?: return@buildTask)) return@buildTask
+                        if (!FireSpreadModule.hasFullAdjacentFace(
+                                instance,
+                                closestAirBlockPos ?: return@buildTask
+                            )
+                        ) return@buildTask
                         instance.setBlock(closestAirBlockPos, Block.FIRE)
                     }
                 }
@@ -81,16 +102,22 @@ class SprayItem(override val item: ItemStack, private val sprayItemType: SprayIt
         /** The max distance from the player for a block to be affected by spray */
         private const val MAX_SPRAY_DISTANCE = 6.0
         private const val MAX_SPRAY_PARTICLE_SPEED = 0.6f
+
         /** How many particles to spawn for each spray */
         private const val SPRAY_PARTICLE_COUNT = 8
+
         /** How many times to release the spray each time you right click */
         private const val SPRAYS_PER_ACTION = 4
+
         /** The duration between sprays in a single right click */
         private const val MILLIS_BETWEEN_SPRAYS = 75L
+
         /** Random variation in the spawn positions of each particle */
         private const val PARTICLE_POSITION_VARIATION = 0.2
+
         /** How far in front of the player to spawn the particles */
         private const val PARTICLE_POSITION_OFFSET = 0.8
+
         /** Random variation in the direction the particles go */
         private const val PARTICLE_VELOCITY_VARIATION = 0.2
 

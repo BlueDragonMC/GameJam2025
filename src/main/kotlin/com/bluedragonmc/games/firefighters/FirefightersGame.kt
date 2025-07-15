@@ -81,8 +81,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 val direction = event.blockFace.toDirection()
                 val blockPos = event.blockPosition.add(direction)
                 if (event.instance.getBlock(
-                        blockPos,
-                        Block.Getter.Condition.TYPE
+                        blockPos, Block.Getter.Condition.TYPE
                     ).isAir && FireSpreadModule.hasFullAdjacentFace(event.instance, blockPos)
                 ) {
                     event.instance.setBlock(blockPos, Block.FIRE)
@@ -110,7 +109,19 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
     }
 
     private companion object {
-        val FLAMETHROWER = SprayItem(ItemStack.builder(Material.BLAZE_ROD).customName(Component.translatable("item.flamethrower", NamedTextColor.DARK_RED).noItalic()).build(), SprayItem.SprayItemType.FIRE_SPREAD)
-        val EXTINGUISHER = SprayItem(ItemStack.builder(Material.GLOW_INK_SAC).customName(Component.translatable("item.extinguisher", NamedTextColor.DARK_AQUA).noItalic()).build(), SprayItem.SprayItemType.FIRE_EXTINGUISH)
+        val FLAMETHROWER = SprayItem(
+            "flamethrower",
+            ItemStack.builder(Material.BLAZE_ROD)
+                .customName(Component.translatable("item.flamethrower", NamedTextColor.DARK_RED).noItalic())
+                .set(DataComponents.MAX_DAMAGE, 64).build(),
+            SprayItem.SprayItemType.FIRE_SPREAD
+        )
+        val EXTINGUISHER = SprayItem(
+            "extinguisher",
+            ItemStack.builder(Material.GLOW_INK_SAC)
+                .customName(Component.translatable("item.extinguisher", NamedTextColor.DARK_AQUA).noItalic())
+                .set(DataComponents.MAX_DAMAGE, 64).build(),
+            SprayItem.SprayItemType.FIRE_EXTINGUISH
+        )
     }
 }
