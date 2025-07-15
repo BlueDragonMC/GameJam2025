@@ -28,12 +28,7 @@ const val SERVER_PORT = 25565
 
 fun main() {
     val server = MinecraftServer.init()
-    MinecraftServer.getConnectionManager().setPlayerProvider { playerConnection, gameProfile ->
-        CustomPlayer(
-            playerConnection,
-            gameProfile
-        )
-    }
+    MinecraftServer.getConnectionManager().setPlayerProvider(::CustomPlayer)
     MojangAuth.init()
 
     Permissions.initialize(PermissionManagerStub)
