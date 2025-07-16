@@ -55,6 +55,11 @@ class FireSpreadModule : GameModule() {
         fun setFire(instance: Instance, pos: Point): Boolean {
             val properties = getProperties(instance, pos)
 
+            val hasSupportBelow = instance.getBlock(pos.add(0.0, -1.0, 0.0)).registry().collisionShape().isFaceFull(BlockFace.TOP)
+            if (!hasSupportBelow && properties.isEmpty()) {
+                return false
+            }
+
             instance.setBlock(
                 pos, Block.FIRE
                     .withProperties(properties)
@@ -73,6 +78,30 @@ class FireSpreadModule : GameModule() {
                 }
             }
             return false
+        }
+
+        private val FIRE_SPREAD_DIRECTIONS by lazy {
+            val directions = mutableListOf<Point>()
+
+            for (x in -1..1) {
+                for (y in -1..1) {
+                    for (z in -1..1) {
+                        if (x == 0 && (y == -1 || y == 0) && z == 0) continue // Ignore the current block & 1 block below
+                        directions.add(BlockVec(x, y, z))
+                    }
+                }
+            }
+
+            return@lazy directions.toTypedArray()
+        }
+
+        fun iterateAdjacentBlocks(pos: Point): Iterator<Point> {
+            val seed = (pos.x() + pos.y() + pos.z()).toInt().absoluteValue % FIRE_SPREAD_DIRECTIONS.size
+            val iterator = FIRE_SPREAD_DIRECTIONS.iterateStartingAt(seed)
+            return object : Iterator<Point> {
+                override fun hasNext(): Boolean = iterator.hasNext()
+                override fun next(): Point = pos.add(iterator.next())
+            }
         }
     }
 
@@ -94,21 +123,6 @@ class FireSpreadModule : GameModule() {
              * The base chance for a fire block to burn out every tick, multiplied by the block's burn chance in [FlammableBlocks]
              */
             private const val BASE_BURN_CHANCE = 0.0005
-
-            private val FIRE_SPREAD_DIRECTIONS by lazy {
-                val directions = mutableListOf<Point>()
-
-                for (x in -1..1) {
-                    for (y in -1..1) {
-                        for (z in -1..1) {
-                            if (x == 0 && (y == -1 || y == 0) && z == 0) continue // Ignore the current block & 1 block below
-                            directions.add(BlockVec(x, y, z))
-                        }
-                    }
-                }
-
-                return@lazy directions.toTypedArray()
-            }
         }
 
         override fun getKey(): Key = KEY
@@ -133,7 +147,8 @@ class FireSpreadModule : GameModule() {
                 // If this fire block doesn't have any adjacent flammable blocks, remove it
                 var hasAdjacentFlammableBlock = false
 
-                for (adjacentPos in iterateAdjacentBlocks(tick.blockPosition)) {
+                for (direction in Direction.entries) {
+                    val adjacentPos = tick.blockPosition.add(direction)
                     if (FlammableBlocks.isFlammable(tick.instance.getBlock(adjacentPos, Block.Getter.Condition.TYPE))) {
                         hasAdjacentFlammableBlock = true
                     }
@@ -192,15 +207,6 @@ class FireSpreadModule : GameModule() {
                         setFire(tick.instance, adjacentPos)
                     }
                 }
-            }
-        }
-
-        private fun iterateAdjacentBlocks(pos: Point): Iterator<Point> {
-            val seed = (pos.x() + pos.y() + pos.z()).toInt().absoluteValue % FIRE_SPREAD_DIRECTIONS.size
-            val iterator = FIRE_SPREAD_DIRECTIONS.iterateStartingAt(seed)
-            return object : Iterator<Point> {
-                override fun hasNext(): Boolean = iterator.hasNext()
-                override fun next(): Point = pos.add(iterator.next())
             }
         }
 

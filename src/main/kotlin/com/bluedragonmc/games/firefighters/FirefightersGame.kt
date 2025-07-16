@@ -12,8 +12,12 @@ import com.bluedragonmc.server.module.instance.InstanceContainerModule
 import com.bluedragonmc.server.module.instance.InstanceTimeModule
 import com.bluedragonmc.server.module.map.AnvilFileMapProviderModule
 import com.bluedragonmc.server.module.minigame.*
-import com.bluedragonmc.server.module.vanilla.*
+import com.bluedragonmc.server.module.vanilla.FallDamageModule
+import com.bluedragonmc.server.module.vanilla.ItemDropModule
+import com.bluedragonmc.server.module.vanilla.ItemPickupModule
+import com.bluedragonmc.server.module.vanilla.NaturalRegenerationModule
 import com.bluedragonmc.server.utils.*
+import net.kyori.adventure.key.Key
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
@@ -35,6 +39,10 @@ import net.minestom.server.event.player.PlayerChatEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
+import net.minestom.server.network.packet.server.play.ExplosionPacket
+import net.minestom.server.particle.Particle
+import net.minestom.server.sound.SoundEvent
+import net.minestom.server.utils.time.TimeUnit
 import java.nio.file.Paths
 import java.time.Duration
 import kotlin.math.max
@@ -285,7 +293,13 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         val points = region.node("cutscene")?.getList(Pos::class.java) ?: return
         val pos1 = region.node("start").get(Pos::class.java) ?: return
         val pos2 = region.node("end").get(Pos::class.java) ?: return
-        getModule<CutsceneModule>().playCutscene(player, this, points, msPerPoint = msPerPoint, stepsPerCurve = stepsPerCurve)
+        getModule<CutsceneModule>().playCutscene(
+            player,
+            this,
+            points,
+            msPerPoint = msPerPoint,
+            stepsPerCurve = stepsPerCurve
+        )
         MinecraftServer.getSchedulerManager().buildTask {
             // For each block, have a chance of turning into an entity and exploding and a chance of just disappearing
             val centerPos = Pos((pos1.x + pos2.x) / 2, pos1.y.coerceAtMost(pos2.y) - 5, (pos1.z + pos2.z) / 2)
@@ -303,9 +317,9 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             )
             // -----
 
-            for (x in minimum.blockX() .. maximum.blockX()) {
-                for (y in minimum.blockY() .. maximum.blockY()) {
-                    for (z in minimum.blockZ() .. maximum.blockZ()) {
+            for (x in minimum.blockX()..maximum.blockX()) {
+                for (y in minimum.blockY()..maximum.blockY()) {
+                    for (z in minimum.blockZ()..maximum.blockZ()) {
                         val pos = Pos(x.toDouble(), y.toDouble(), z.toDouble())
                         val block = instance.getBlock(pos)
                         if (block.isAir || block.compare(Block.FIRE)) continue
@@ -325,6 +339,24 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                                     remove()
                                 }.delay(Duration.ofMillis(msPerPoint * 20)).schedule()
                             }
+                        }
+                        if (rand < 0.1) {
+                            // Play an explosion particle effect
+                            MinecraftServer.getSchedulerManager().buildTask {
+                                instance.sendGroupedPacket(
+                                    ExplosionPacket(
+                                        pos,
+                                        Pos.ZERO,
+                                        Particle.fromKey(Key.key("minecraft:explosion"))!!,
+                                        SoundEvent.ENTITY_GENERIC_EXPLODE
+                                    )
+                                )
+                                FireSpreadModule.iterateAdjacentBlocks(pos).forEach { it ->
+                                    if (Random.nextFloat() < 0.3) {
+                                        FireSpreadModule.setFire(instance, it)
+                                    }
+                                }
+                            }.delay(Duration.of((rand * 300).toLong(), TimeUnit.SERVER_TICK)).schedule()
                         }
                     }
                 }
