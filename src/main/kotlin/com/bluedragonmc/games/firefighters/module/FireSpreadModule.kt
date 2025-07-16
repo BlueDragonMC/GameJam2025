@@ -151,7 +151,9 @@ class FireSpreadModule : GameModule() {
             val props = tick.block.properties()
             val newProps = getProperties(tick.instance, tick.blockPosition)
             if (newProps.any { (key, value) -> props[key] != value }) {
-                tick.instance.setBlock(tick.blockPosition, tick.block.withProperties(newProps))
+                MinecraftServer.getSchedulerManager().scheduleNextTick {
+                    tick.instance.setBlock(tick.blockPosition, tick.block.withProperties(newProps))
+                }
             }
 
             // Try to spread this fire to other blocks
@@ -186,7 +188,9 @@ class FireSpreadModule : GameModule() {
                 val block = tick.instance.getBlock(adjacentPos, Block.Getter.Condition.TYPE)
                 val chance = FlammableBlocks.getBurnChance(block) ?: continue
                 if (Random.nextDouble() < BASE_BURN_CHANCE * chance) {
-                    setFire(tick.instance, adjacentPos)
+                    MinecraftServer.getSchedulerManager().scheduleNextTick {
+                        setFire(tick.instance, adjacentPos)
+                    }
                 }
             }
         }
