@@ -44,7 +44,6 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         class BeforeGameStart : Stage {
             override fun advance(parent: FirefightersGame): Stage {
                 // Starting Stage 1
-                parent.use(BurnableRegionsModule())
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
                     if ((parent.getModuleOrNull<BurnableRegionsModule>()?.getAverageBurnProportion() ?: 0.0) > 0.99) {
                         parent.currentStage = parent.currentStage.advance(parent)
@@ -58,7 +57,11 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         class Stage1 : Stage {
             override fun advance(parent: FirefightersGame): Stage {
                 // Stage 1 -> Stage 2
-                parent.unregister(parent.getModule<BurnableRegionsModule>())
+                parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
+                    if ((parent.getModuleOrNull<BurnableRegionsModule>()?.getAverageBurnProportion() ?: 0.0) > 0.99) {
+                        parent.currentStage = parent.currentStage.advance(parent)
+                    }
+                }.expireWhen { parent.currentStage !is Stage2 }.build())
                 return Stage2()
             }
         }
@@ -146,19 +149,34 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             if (state != GameState.INGAME) return@bind getStatusSection()
             val list = getStatusSection().toMutableList()
 
-            if (hasModule<BurnableRegionsModule>()) { // Stage 1
-                val regions = getModule<BurnableRegionsModule>()
-                val phase = (getInstance().worldAge % 20L) / 20.0
-                val colors = "#a10000:#ea2300:#ff8100:#f25500:#d80000"
-                val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>BURN STATUS")
-                list += getSpacer()
-                list += title
-                list += regions.getScoreboardText()
-                list += getSpacer()
+            when (currentStage) {
+                is Stage.Stage1 -> {
+                    val regions = getModule<BurnableRegionsModule>()
+                    val phase = (getInstance().worldAge % 20L) / 20.0
+                    val colors = "#a10000:#ea2300:#ff8100:#f25500:#d80000"
+                    val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>BURN THE FACTORY")
+                    list += getSpacer()
+                    list += title
+                    list += regions.getScoreboardText()
+                    list += getSpacer()
+                }
+                is Stage.Stage2 -> {
+                    val regions = getModule<BurnableRegionsModule>()
+                    val phase = (getInstance().worldAge % 20L) / 20.0
+                    val colors = "#acfc8d:#4af407:#18ce64:#057a01"
+                    val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>NUCLEAR PLANT")
+                    list += getSpacer()
+                    list += title
+                    list += regions.getScoreboardText()
+                    list += getSpacer()
+                }
+                else -> {}
             }
-
             return@bind list
         }
+
+        use(BurnableRegionsModule("burnableRegionsStage1")) { currentStage is Stage.Stage1 }
+        use(BurnableRegionsModule("burnableRegionsStage2")) { currentStage is Stage.Stage2 }
 
         handleEvent<InstanceTickEvent> { event ->
             if (event.instance.worldAge % 3L == 0L) {
@@ -173,13 +191,6 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             } else {
                 currentStage = Stage.Stage1()
             }
-        }
-
-        // TODO for testing only below this line
-        getInstance().apply {
-            setBlock(-7, 64, 0, Block.COAL_BLOCK)
-            setBlock(-7, 65, 0, Block.COAL_BLOCK)
-            setBlock(-7, 66, 0, Block.COAL_BLOCK)
         }
 
         handleEvent<PlayerJoinGameEvent> {

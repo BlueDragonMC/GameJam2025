@@ -19,7 +19,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-class BurnableRegionsModule : GameModule() {
+class BurnableRegionsModule(private val configKey: String) : GameModule() {
 
     private var regions: List<Region> = listOf()
 
@@ -69,7 +69,7 @@ class BurnableRegionsModule : GameModule() {
         parent: Game,
         eventNode: EventNode<Event>
     ) {
-        regions = parent.getModule<ConfigModule>().getConfig().node("burnableRegions").childrenList().map { child ->
+        regions = parent.getModule<ConfigModule>().getConfig().node(configKey).childrenList().map { child ->
             val name = child.node("name").get(Component::class.java)!!
             val pos1 = child.node("start").get(Pos::class.java)!!
             val pos2 = child.node("end").get(Pos::class.java)!!
@@ -112,6 +112,7 @@ class BurnableRegionsModule : GameModule() {
                         NamedTextColor.DARK_RED
                     ).decoration(TextDecoration.BOLD, percent > 0.75)
                 )
+                .append(Component.text(" burned", NamedTextColor.GRAY))
         }
     }
 

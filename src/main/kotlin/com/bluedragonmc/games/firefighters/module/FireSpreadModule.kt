@@ -21,6 +21,8 @@ import kotlin.random.Random
 fun Point.add(direction: Direction) = add(direction.toPoint())
 fun Direction.toPoint(): Point = BlockVec(normalX(), normalY(), normalZ())
 
+// TODO: don't allow blocks in Stage 2 regions to burn while Stage 1 is active
+
 class FireSpreadModule : GameModule() {
 
     override fun initialize(

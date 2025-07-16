@@ -15,6 +15,7 @@ object FlammableBlocks {
 
     init {
         var map = mutableMapOf<Block,Pair<Int,Int>>()
+        // Vanilla Minecraft blocks
         map[Block.OAK_PLANKS] = 5 to 20
         map[Block.SPRUCE_PLANKS] = 5 to 20
         map[Block.BIRCH_PLANKS] = 5 to 20
@@ -211,6 +212,8 @@ object FlammableBlocks {
         map[Block.GLOW_LICHEN] = 15 to 100
         map[Block.FIREFLY_BUSH] = 60 to 100
         map[Block.BUSH] = 60 to 100
+        // Custom additions
+        map[Block.SLIME_BLOCK] = 40 to 100
         flammableBlocks = map.toMap()
     }
 }
