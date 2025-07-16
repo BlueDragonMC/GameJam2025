@@ -16,6 +16,7 @@ import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.block.BlockFace
 import net.minestom.server.instance.block.BlockHandler
 import net.minestom.server.utils.Direction
+import kotlin.math.absoluteValue
 import kotlin.random.Random
 
 fun Point.add(direction: Direction) = add(direction.toPoint())
@@ -191,7 +192,7 @@ class FireSpreadModule : GameModule() {
         }
 
         private fun iterateAdjacentBlocks(pos: Point): Iterator<Point> {
-            val seed = (pos.x() + pos.y() + pos.z()).toInt() % FIRE_SPREAD_DIRECTIONS.size
+            val seed = (pos.x() + pos.y() + pos.z()).toInt().absoluteValue % FIRE_SPREAD_DIRECTIONS.size
             val iterator = FIRE_SPREAD_DIRECTIONS.iterateStartingAt(seed)
             return object : Iterator<Point> {
                 override fun hasNext(): Boolean = iterator.hasNext()
