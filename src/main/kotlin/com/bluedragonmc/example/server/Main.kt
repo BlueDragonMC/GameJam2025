@@ -22,7 +22,7 @@ import net.minestom.server.tag.Tag
 
 val GAME_CLASS = FirefightersGame::class
 /** The name of the map folder in worlds/gameName/ */
-const val MAP_NAME = "Sandstone"
+const val MAP_NAME = "Reactor"
 const val SERVER_ADDRESS = "0.0.0.0"
 const val SERVER_PORT = 25565
 

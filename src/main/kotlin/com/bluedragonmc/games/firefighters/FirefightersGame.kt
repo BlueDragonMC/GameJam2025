@@ -109,7 +109,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             )
         )
         use(TimedRespawnModule(seconds = 5))
-        use(VoidDeathModule(threshold = 0.0))
+        use(VoidDeathModule(threshold = -60.0))
 //        use(VoteStartModule(minPlayers = 1, countdownSeconds = 5))
         use(WinModule())
 
