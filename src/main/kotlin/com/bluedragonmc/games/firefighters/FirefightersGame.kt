@@ -26,6 +26,7 @@ import net.minestom.server.MinecraftServer
 import net.minestom.server.component.DataComponents
 import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.coordinate.Pos
+import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.Entity
 import net.minestom.server.entity.EntityType
 import net.minestom.server.entity.GameMode
@@ -45,8 +46,6 @@ import net.minestom.server.sound.SoundEvent
 import net.minestom.server.utils.time.TimeUnit
 import java.nio.file.Paths
 import java.time.Duration
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.random.Random
 
 class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
@@ -302,63 +301,45 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         )
         MinecraftServer.getSchedulerManager().buildTask {
             // For each block, have a chance of turning into an entity and exploding and a chance of just disappearing
-            val centerPos = Pos((pos1.x + pos2.x) / 2, pos1.y.coerceAtMost(pos2.y) - 5, (pos1.z + pos2.z) / 2)
+            val centerPos = Vec((pos1.x + pos2.x) / 2, pos1.y.coerceAtMost(pos2.y) - 5, (pos1.z + pos2.z) / 2)
 
-            // ----- TODO refactor into util method
-            val minimum = BlockVec(
-                min(pos1.blockX(), pos2.blockX()),
-                min(pos1.blockY(), pos2.blockY()),
-                min(pos1.blockZ(), pos2.blockZ())
-            )
-            val maximum = BlockVec(
-                max(pos1.blockX(), pos2.blockX()),
-                max(pos1.blockY(), pos2.blockY()),
-                max(pos1.blockZ(), pos2.blockZ())
-            )
-            // -----
-
-            for (x in minimum.blockX()..maximum.blockX()) {
-                for (y in minimum.blockY()..maximum.blockY()) {
-                    for (z in minimum.blockZ()..maximum.blockZ()) {
-                        val pos = Pos(x.toDouble(), y.toDouble(), z.toDouble())
-                        val block = instance.getBlock(pos)
-                        if (block.isAir || block.compare(Block.FIRE)) continue
-                        val rand = Random.nextDouble()
-                        if (rand < 0.5) {
-                            instance.setBlock(pos, Block.AIR)
-                        }
-                        if (rand < 0.3) {
-                            // Turn block into an entity and send away from center
-                            Entity(EntityType.BLOCK_DISPLAY).apply {
-                                val meta = entityMeta as BlockDisplayMeta
-                                meta.setBlockState(block)
-                                setInstance(instance, pos)
-                                velocity = pos.sub(centerPos).asVec().mul(5 * rand)
-                                MinecraftServer.getSchedulerManager().buildTask {
-                                    instance.setBlock(position, block)
-                                    remove()
-                                }.delay(Duration.ofMillis(msPerPoint * 20)).schedule()
+            for (pos in (BlockVec(pos1)..BlockVec(pos2))) {
+                val block = instance.getBlock(pos)
+                if (block.isAir || block.compare(Block.FIRE)) continue
+                val rand = Random.nextDouble()
+                if (rand < 0.5) {
+                    instance.setBlock(pos, Block.AIR)
+                }
+                if (rand < 0.3) {
+                    // Turn block into an entity and send away from center
+                    Entity(EntityType.BLOCK_DISPLAY).apply {
+                        val meta = entityMeta as BlockDisplayMeta
+                        meta.setBlockState(block)
+                        setInstance(instance, pos)
+                        velocity = pos.sub(centerPos).toVec().mul(5 * rand)
+                        MinecraftServer.getSchedulerManager().buildTask {
+                            instance.setBlock(position, block)
+                            remove()
+                        }.delay(Duration.ofMillis(msPerPoint * 20)).schedule()
+                    }
+                }
+                if (rand < 0.1) {
+                    // Play an explosion particle effect
+                    MinecraftServer.getSchedulerManager().buildTask {
+                        instance.sendGroupedPacket(
+                            ExplosionPacket(
+                                pos,
+                                Pos.ZERO,
+                                Particle.fromKey(Key.key("minecraft:explosion"))!!,
+                                SoundEvent.ENTITY_GENERIC_EXPLODE
+                            )
+                        )
+                        FireSpreadModule.iterateAdjacentBlocks(pos).forEach { it ->
+                            if (Random.nextFloat() < 0.3) {
+                                FireSpreadModule.setFire(instance, it)
                             }
                         }
-                        if (rand < 0.1) {
-                            // Play an explosion particle effect
-                            MinecraftServer.getSchedulerManager().buildTask {
-                                instance.sendGroupedPacket(
-                                    ExplosionPacket(
-                                        pos,
-                                        Pos.ZERO,
-                                        Particle.fromKey(Key.key("minecraft:explosion"))!!,
-                                        SoundEvent.ENTITY_GENERIC_EXPLODE
-                                    )
-                                )
-                                FireSpreadModule.iterateAdjacentBlocks(pos).forEach { it ->
-                                    if (Random.nextFloat() < 0.3) {
-                                        FireSpreadModule.setFire(instance, it)
-                                    }
-                                }
-                            }.delay(Duration.of((rand * 300).toLong(), TimeUnit.SERVER_TICK)).schedule()
-                        }
-                    }
+                    }.delay(Duration.of((rand * 300).toLong(), TimeUnit.SERVER_TICK)).schedule()
                 }
             }
         }.delay(Duration.ofMillis(msPerPoint * stepsPerCurve * numPointsBeforeExplosion)).schedule().manage(this)

@@ -1,6 +1,7 @@
 package com.bluedragonmc.games.firefighters.module
 
 import com.bluedragonmc.games.firefighters.FlammableBlocks
+import com.bluedragonmc.games.firefighters.rangeTo
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.module.GameModule
 import com.bluedragonmc.server.module.config.ConfigModule
@@ -15,15 +16,13 @@ import net.minestom.server.event.EventNode
 import net.minestom.server.event.instance.InstanceTickEvent
 import net.minestom.server.instance.Instance
 import net.minestom.server.instance.block.Block
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 class BurnableRegionsModule(private val configKey: String) : GameModule() {
 
     private var regions: List<Region> = listOf()
 
-    private data class Region(val name: Component, val minimum: BlockVec, val maximum: BlockVec) {
+    private data class Region(val name: Component, val start: BlockVec, val end: BlockVec) {
 
         /**
          * The total number of flammable blocks in the region.
@@ -33,12 +32,8 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
         var currentFlammableBlocks: Int = 0
 
         fun countFlammableBlocks(instance: Instance) =
-            (minimum.blockX()..maximum.blockX()).sumOf { x ->
-                (minimum.blockY()..maximum.blockY()).sumOf { y ->
-                    (minimum.blockZ()..maximum.blockZ()).count { z ->
-                        FlammableBlocks.isFlammable(instance.getBlock(x, y, z, Block.Getter.Condition.TYPE)!!)
-                    }
-                }
+            (start .. end).count { pos ->
+                FlammableBlocks.isFlammable(instance.getBlock(pos, Block.Getter.Condition.TYPE)!!)
             }
 
         // Called every second
@@ -71,21 +66,10 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
     fun loadFrom(parent: Game, configKey: String) {
         regions = parent.getModule<ConfigModule>().getConfig().node(configKey).childrenList().map { child ->
             val name = child.node("name").get(Component::class.java)!!
-            val pos1 = child.node("start").get(Pos::class.java)!!
-            val pos2 = child.node("end").get(Pos::class.java)!!
+            val start = child.node("start").get(Pos::class.java)!!
+            val end = child.node("end").get(Pos::class.java)!!
 
-            val minimum = BlockVec(
-                min(pos1.blockX(), pos2.blockX()),
-                min(pos1.blockY(), pos2.blockY()),
-                min(pos1.blockZ(), pos2.blockZ())
-            )
-            val maximum = BlockVec(
-                max(pos1.blockX(), pos2.blockX()),
-                max(pos1.blockY(), pos2.blockY()),
-                max(pos1.blockZ(), pos2.blockZ())
-            )
-
-            Region(name, minimum, maximum)
+            Region(name, BlockVec(start), BlockVec(end))
         }
     }
 
