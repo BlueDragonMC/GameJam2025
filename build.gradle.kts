@@ -12,14 +12,14 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("com.github.BlueDragonMC.Server:common:1ffe99164e") {
+    implementation("com.github.BlueDragonMC.Server:common:763c96917d") {
         exclude(group = "org.tinylog")
     }
     implementation("net.kyori:adventure-text-minimessage:4.11.0")
     implementation("net.minestom:minestom:2025.07.11-1.21.7")
-    implementation("org.spongepowered:configurate-yaml:4.1.2")
+    implementation("org.spongepowered:configurate-yaml:4.2.0")
 
-    implementation("ch.qos.logback:logback-classic:1.4.12")
+    implementation("ch.qos.logback:logback-classic:1.5.13")
 
     compileOnly("com.github.bluedragonmc:rpc:fb16ef4cc5")
     implementation(kotlin("reflect"))

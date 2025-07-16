@@ -16,11 +16,11 @@ import com.bluedragonmc.server.module.instance.InstanceTimeModule
 import com.bluedragonmc.server.module.map.AnvilFileMapProviderModule
 import com.bluedragonmc.server.module.minigame.*
 import com.bluedragonmc.server.module.vanilla.*
-import com.bluedragonmc.server.utils.GameState
-import com.bluedragonmc.server.utils.miniMessage
-import com.bluedragonmc.server.utils.noItalic
+import com.bluedragonmc.server.utils.*
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.TextColor
+import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.MinecraftServer
 import net.minestom.server.component.DataComponents
 import net.minestom.server.entity.GameMode
@@ -35,6 +35,11 @@ import java.nio.file.Paths
 
 class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
+    val firefightersTeam =
+        TeamModule.Team(Component.translatable("firefighters.team.firefighters", TextColor.color(252, 50, 50)))
+    val arsonistsTeam =
+        TeamModule.Team(Component.translatable("firefighters.team.arsonists", TextColor.color(252, 121, 50)))
+
     sealed interface Stage {
 
         /** Go to the next stage, returning the next stage */
@@ -43,10 +48,9 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         /** The game hasn't started yet, no stages should be enabled */
         class BeforeGameStart : Stage {
             override fun advance(parent: FirefightersGame): Stage {
-                parent.sendMessage(Component.translatable("firefighters.stage_1.start"))
                 // Starting Stage 1
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
-                    if ((parent.getModuleOrNull<BurnableRegionsModule>()?.getAverageBurnProportion() ?: 0.0) > 0.99) {
+                    if (parent.getModuleOrNull<BurnableRegionsModule>()!!.getFlammableBlocksRemaining() == 0) {
                         parent.currentStage = parent.currentStage.advance(parent)
                     }
                 }.expireWhen { parent.currentStage !is Stage1 }.build())
@@ -57,14 +61,35 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         /** Arsonists trying to burn down the factories */
         class Stage1 : Stage {
             override fun advance(parent: FirefightersGame): Stage {
-                parent.sendMessage(Component.translatable("firefighters.stage_2.start"))
                 parent.getModule<BurnableRegionsModule>().loadFrom(parent, "burnableRegionsStage2")
                 // Stage 1 -> Stage 2
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
-                    if ((parent.getModuleOrNull<BurnableRegionsModule>()?.getAverageBurnProportion() ?: 0.0) > 0.99) {
+                    if (parent.getModuleOrNull<BurnableRegionsModule>()!!.getFlammableBlocksRemaining() == 0) {
                         parent.currentStage = parent.currentStage.advance(parent)
                     }
                 }.expireWhen { parent.currentStage !is Stage2 }.build())
+
+                parent.firefightersTeam.sendMessage(
+                    (Component.translatable(
+                        "firefighters.stage_2.start.firefighters",
+                        NamedTextColor.RED,
+                        TextDecoration.BOLD
+                    ) + Component.newline() + Component.translatable(
+                        "firefighters.stage_2.start.firefighters.description",
+                        NamedTextColor.GRAY
+                    ).decoration(TextDecoration.BOLD, false)).surroundWithSeparators()
+                )
+                parent.arsonistsTeam.sendMessage(
+                    (Component.translatable(
+                        "firefighters.stage_2.start.arsonists",
+                        NamedTextColor.GREEN,
+                        TextDecoration.BOLD
+                    ) + Component.newline() + Component.translatable(
+                        "firefighters.stage_2.start.arsonists.description",
+                        NamedTextColor.GRAY
+                    ).decoration(TextDecoration.BOLD, false)).surroundWithSeparators()
+                )
+
                 return Stage2()
             }
         }
@@ -94,31 +119,61 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
     override fun initialize() {
         use(AnvilFileMapProviderModule(Paths.get("worlds/$name/$mapName")))
         use(ConfigModule())
-        use(DoorsModule())
         use(FallDamageModule())
         use(InstanceContainerModule())
         use(InstanceTimeModule())
         use(ItemDropModule())
         use(ItemPickupModule())
-        use(MOTDModule(motd = Component.text("Firefighters vs arsonists")))
+        use(MOTDModule(motd = Component.translatable("firefighters.motd")))
         use(NaturalRegenerationModule())
         use(OldCombatModule())
         use(PlayerResetModule(defaultGameMode = GameMode.SURVIVAL))
         use(SidebarModule(name))
-        use(SpawnpointModule(SpawnpointModule.ConfigSpawnpointProvider()))
+        use(SpawnpointModule(SpawnpointModule.ConfigSpawnpointProvider())) {
+
+        }
         use(SpectatorModule(spectateOnDeath = false, spectateOnLeave = true))
-        use(
-            TeamModule(
-                autoTeams = true,
-                autoTeamMode = TeamModule.AutoTeamMode.TEAM_COUNT,
-                autoTeamCount = 2,
-                allowFriendlyFire = false
-            )
-        )
         use(TimedRespawnModule(seconds = 5))
         use(VoidDeathModule(threshold = -60.0))
 //        use(VoteStartModule(minPlayers = 1, countdownSeconds = 5))
         use(WinModule())
+
+        use(TeamModule(allowFriendlyFire = false)) { teamModule ->
+            teamModule.teams.add(firefightersTeam)
+            teamModule.teams.add(arsonistsTeam)
+        }
+
+        onGameStart {
+            // Assign players to teams
+            for ((i, player) in players.shuffled().withIndex()) {
+                if (i % 2 == 0) {
+                    arsonistsTeam.addPlayer(player)
+                } else {
+                    firefightersTeam.addPlayer(player)
+                }
+            }
+
+            firefightersTeam.sendMessage(
+                (Component.translatable(
+                    "firefighters.team_assignment.firefighters",
+                    firefightersTeam.name.color(),
+                    TextDecoration.BOLD
+                ) + Component.newline() + Component.translatable(
+                    "firefighters.team_assignment.firefighters.description",
+                    NamedTextColor.GRAY
+                ).decoration(TextDecoration.BOLD, false)).surroundWithSeparators()
+            )
+            arsonistsTeam.sendMessage(
+                (Component.translatable(
+                    "firefighters.team_assignment.arsonists",
+                    arsonistsTeam.name.color(),
+                    TextDecoration.BOLD
+                ) + Component.newline() + Component.translatable(
+                    "firefighters.team_assignment.arsonists.description",
+                    NamedTextColor.GRAY
+                ).decoration(TextDecoration.BOLD, false)).surroundWithSeparators()
+            )
+        }
 
         use(CustomItemsModule()) {
             it.addCustomItem(FLAMETHROWER)
@@ -164,6 +219,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     list += regions.getScoreboardText()
                     list += getSpacer()
                 }
+
                 is Stage.Stage2 -> {
                     val regions = getModule<BurnableRegionsModule>()
                     val phase = (getInstance().worldAge % 20L) / 20.0
@@ -174,6 +230,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     list += regions.getScoreboardText()
                     list += getSpacer()
                 }
+
                 else -> {}
             }
             return@bind list
@@ -182,8 +239,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         use(BurnableRegionsModule("burnableRegionsStage1")) { currentStage is Stage.Stage1 || currentStage is Stage.Stage2 }
 
         handleEvent<InstanceTickEvent> { event ->
-            if (event.instance.worldAge % 3L == 0L) {
-                // Update scoreboard ~7x per second for the "Burn status" title animation
+            if (event.instance.worldAge % 2L == 0L) {
+                // Update scoreboard ~10x per second for the "Burn status" title animation
                 binding.update()
             }
         }

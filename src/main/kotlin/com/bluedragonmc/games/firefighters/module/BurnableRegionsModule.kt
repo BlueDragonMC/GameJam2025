@@ -123,5 +123,8 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
         }
     }
 
-    fun getAverageBurnProportion() = regions.sumOf { it.getProportionBurned() } / regions.size.toDouble()
+    fun getFlammableBlocksRemaining(): Int {
+        if (regions.any { it.totalFlammableBlocks == null }) return -1
+        return regions.sumOf { it.currentFlammableBlocks }
+    }
 }
