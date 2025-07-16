@@ -16,7 +16,6 @@ import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.block.BlockFace
 import net.minestom.server.instance.block.BlockHandler
 import net.minestom.server.utils.Direction
-import java.util.function.Predicate
 import kotlin.random.Random
 
 fun Point.add(direction: Direction) = add(direction.toPoint())
@@ -36,25 +35,22 @@ class FireSpreadModule : GameModule() {
     }
 
     companion object {
-        fun setFire(instance: Instance, pos: Point): Boolean {
-            val properties = mutableMapOf<String, String>()
 
-            // Show fire on adjacent blocks if the block below won't fully connect with the fire below
-            if (!instance.getBlock(pos.sub(0.0, 1.0, 0.0)).registry().collisionShape().isFaceFull(BlockFace.TOP)) {
-                for (direction in Direction.entries) {
-                    if (direction == Direction.DOWN) continue
-                    if (instance.getBlock(pos.add(direction)).registry().collisionShape()
-                            .isFaceFull(BlockFace.fromDirection(direction.opposite()))
-                    ) {
-                        properties.put(direction.name.lowercase(), "true")
-                    }
-                }
-
-                if (properties.isEmpty()) {
-                    // Fire which isn't connected to any blocks (i.e. just floating in the air) shouldn't be placed
-                    return false
+        fun getProperties(instance: Instance, pos: Point): Map<String,String>{
+            val properties = mutableMapOf<String,String>()
+            for (direction in Direction.entries) {
+                if (instance.getBlock(pos.add(direction)).registry().collisionShape()
+                        .isFaceFull(BlockFace.fromDirection(direction.opposite()))
+                ) {
+                    if (direction == Direction.DOWN) return emptyMap() // Fire supported from below never connects to other directions
+                    properties.put(direction.name.lowercase(), "true")
                 }
             }
+            return properties
+        }
+
+        fun setFire(instance: Instance, pos: Point): Boolean {
+            val properties = getProperties(instance, pos)
 
             instance.setBlock(
                 pos, Block.FIRE
@@ -119,6 +115,7 @@ class FireSpreadModule : GameModule() {
         override fun tick(tick: BlockHandler.Tick) {
             super.tick(tick)
 
+            // If this fire has been alive for too long, remove it
             if (aliveTicks++ >= FIRE_SPREAD_MAX_TIME) {
                 MinecraftServer.getSchedulerManager().scheduleNextTick {
                     // ^ We need to run this at the start of the next tick so that we're not mutating the tickable block handlers as they're being iterated over (see DynamicChunk#tick)
@@ -127,50 +124,77 @@ class FireSpreadModule : GameModule() {
                 return
             }
 
+            val hasSupportBelow = tick.instance.getBlock(tick.blockPosition.add(0.0, -1.0, 0.0)).registry().collisionShape().isFaceFull(BlockFace.TOP)
+
+            if (!hasSupportBelow || aliveTicks >= FIRE_SPREAD_MAX_TIME / 3) {
+                // If this fire block doesn't have any adjacent flammable blocks, remove it
+                var hasAdjacentFlammableBlock = false
+
+                for (adjacentPos in iterateAdjacentBlocks(tick.blockPosition)) {
+                    if (FlammableBlocks.isFlammable(tick.instance.getBlock(adjacentPos, Block.Getter.Condition.TYPE))) {
+                        hasAdjacentFlammableBlock = true
+                    }
+                }
+
+                if (!hasAdjacentFlammableBlock) {
+                    MinecraftServer.getSchedulerManager().scheduleNextTick {
+                        // ^ We need to run this at the start of the next tick so that we're not mutating the tickable block handlers as they're being iterated over (see DynamicChunk#tick)
+                        tick.instance.setBlock(tick.blockPosition, Block.AIR)
+                    }
+                    return
+                }
+            }
+
+            val props = tick.block.properties()
+            val newProps = getProperties(tick.instance, tick.blockPosition)
+            if (newProps.any { (key, value) -> props[key] != value }) {
+                tick.instance.setBlock(tick.blockPosition, tick.block.withProperties(newProps))
+            }
+
+            // Try to spread this fire to other blocks
             spread@{
                 val chance = FlammableBlocks.getSpreadChance(tick.block) ?: return@spread
 
-                if (Random.nextDouble() < BASE_FIRE_SPREAD_CHANCE * chance) {
-                    val adjacentPos = findAdjacentBlock(tick.instance, tick.blockPosition) { pos ->
-                        FlammableBlocks.isFlammable(tick.instance.getBlock(pos, Block.Getter.Condition.TYPE))
-                    } ?: return@spread
+                if (Random.nextDouble() > BASE_FIRE_SPREAD_CHANCE * chance) {
+                    return@spread
+                }
 
-                    MinecraftServer.getSchedulerManager().scheduleNextTick {
-                        // ^ We need to run this at the start of the next tick so that we're not mutating the tickable block handlers as they're being iterated over (see DynamicChunk#tick)
-                        setFire(tick.instance, adjacentPos)
+                for (adjacentPos in iterateAdjacentBlocks(tick.blockPosition)) {
+                    if (tick.instance.getBlock(adjacentPos, Block.Getter.Condition.TYPE).isAir &&
+                        hasFullAdjacentFace(tick.instance, adjacentPos) &&
+                        FlammableBlocks.isFlammable(
+                            tick.instance.getBlock(
+                                tick.blockPosition,
+                                Block.Getter.Condition.TYPE
+                            )
+                        )
+                    ) {
+                        MinecraftServer.getSchedulerManager().scheduleNextTick {
+                            // ^ We need to run this at the start of the next tick so that we're not mutating the tickable block handlers as they're being iterated over (see DynamicChunk#tick)
+                            setFire(tick.instance, adjacentPos)
+                        }
+                        break
                     }
                 }
             }
 
-            burn@{
-                val chance = FlammableBlocks.getBurnChance(tick.block) ?: return@burn
-
+            // Try to burn (destroy) adjacent flammable blocks
+            for (adjacentPos in iterateAdjacentBlocks(tick.blockPosition)) {
+                val block = tick.instance.getBlock(adjacentPos, Block.Getter.Condition.TYPE)
+                val chance = FlammableBlocks.getBurnChance(block) ?: continue
                 if (Random.nextDouble() < BASE_BURN_CHANCE * chance) {
-                    val adjacentPos = findAdjacentBlock(tick.instance, tick.blockPosition) { pos ->
-                        FlammableBlocks.isFlammable(tick.instance.getBlock(pos, Block.Getter.Condition.TYPE))
-                    } ?: return@burn
-
                     setFire(tick.instance, adjacentPos)
                 }
             }
         }
 
-        private fun findAdjacentBlock(
-            instance: Instance,
-            pos: Point,
-            predicate: Predicate<Point> = Predicate { true }
-        ): Point? {
+        private fun iterateAdjacentBlocks(pos: Point): Iterator<Point> {
             val seed = (pos.x() + pos.y() + pos.z()).toInt() % FIRE_SPREAD_DIRECTIONS.size
-            for (direction in FIRE_SPREAD_DIRECTIONS.iterateStartingAt(seed)) {
-                val adjacentPos = pos.add(direction)
-                if (instance.getBlock(adjacentPos, Block.Getter.Condition.TYPE).isAir &&
-                    hasFullAdjacentFace(instance, adjacentPos) &&
-                    predicate.test(adjacentPos)
-                ) {
-                    return adjacentPos
-                }
+            val iterator = FIRE_SPREAD_DIRECTIONS.iterateStartingAt(seed)
+            return object : Iterator<Point> {
+                override fun hasNext(): Boolean = iterator.hasNext()
+                override fun next(): Point = pos.add(iterator.next())
             }
-            return null
         }
 
         override fun isTickable() = true

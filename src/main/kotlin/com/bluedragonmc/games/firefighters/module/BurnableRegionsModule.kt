@@ -61,7 +61,7 @@ class BurnableRegionsModule : GameModule() {
             if (totalFlammableBlocks == null || totalFlammableBlocks == 0) {
                 return 0.0
             }
-            return (1.0 - currentFlammableBlocks) / totalFlammableBlocks!!
+            return 1.0 - (currentFlammableBlocks.toDouble() / totalFlammableBlocks!!.toDouble())
         }
     }
 
@@ -114,4 +114,6 @@ class BurnableRegionsModule : GameModule() {
                 )
         }
     }
+
+    fun getAverageBurnProportion() = regions.sumOf { it.getProportionBurned() } / regions.size.toDouble()
 }
