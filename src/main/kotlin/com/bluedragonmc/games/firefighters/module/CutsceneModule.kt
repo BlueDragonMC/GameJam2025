@@ -12,24 +12,23 @@ import net.minestom.server.entity.Player
 import net.minestom.server.entity.metadata.display.BlockDisplayMeta
 import net.minestom.server.event.Event
 import net.minestom.server.event.EventNode
-import net.minestom.server.instance.block.Block
 import java.time.Duration
 
 class CutsceneModule : GameModule() {
     override fun initialize(parent: Game, eventNode: EventNode<Event>) {}
 
-    fun playCutscene(player: Player, game: Game, points: List<Pos>, stepsPerCurve: Int = 5, tension: Float = 0.5f) {
+    fun playCutscene(player: Player, game: Game, points: List<Pos>, stepsPerCurve: Int = 5, tension: Float = 0.5f, msPerPoint: Long = 500) {
         val oldGameMode = player.gameMode
+        val oldPosition = player.position
         val splinePoints = generateSpline(points, stepsPerCurve, tension)
-        val msPerPoint = 500L
 
         Entity(EntityType.BLOCK_DISPLAY).apply {
             val meta = entityMeta as BlockDisplayMeta
-            meta.setBlockState(Block.DIAMOND_ORE)
             meta.posRotInterpolationDuration = msPerPoint.toInt() / 20
             setNoGravity(true)
             setInstance(player.instance, splinePoints.first())
             MinecraftServer.getSchedulerManager().scheduleNextTick {
+                player.teleport(position)
                 player.gameMode = GameMode.SPECTATOR
                 player.spectate(this)
             }
@@ -42,6 +41,7 @@ class CutsceneModule : GameModule() {
                 player.stopSpectating()
                 remove()
                 player.setGameMode(oldGameMode)
+                player.teleport(oldPosition)
             }.delay(Duration.ofMillis((splinePoints.size + 1) * msPerPoint)).schedule().manage(game)
         }
     }
@@ -67,10 +67,14 @@ class CutsceneModule : GameModule() {
                         .add(currStart.mul(1 + .5 * tSquared * (tension - 6) + .5 * tCubed * (4 - tension)))
                         .add(currEnd.mul(.5 * tCubed * (tension - 4) + .5 * tension * t - (tension - 3) * tSquared))
                         .add(next.mul(-.5 * tension * tSquared + .5 * tension * tCubed))
+                        .withYaw(interpolate(currStart.yaw, currEnd.yaw, t))
+                        .withPitch(interpolate(currStart.pitch, currEnd.pitch, t))
                     result.add(interpolatedPoint)
                 }
             }
             return result
         }
+
+        fun interpolate(prev: Float, next: Float, t: Double): Float = (prev + (next - prev) * t).toFloat()
     }
 }

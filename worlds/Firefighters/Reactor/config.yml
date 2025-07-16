@@ -10,7 +10,14 @@ burnableRegionsStage1:
     end: 12, -53, 16
   - name: <yellow><lang:firefighters.factory_2>
     start: -90, -52, 36
-    end: -66, -46, 14
+    end: -66, -37, 14
+    cutscene:
+      - -83, -50, 18.5, 0, 0
+      - -83, -50, 6.5, 0, 0
+      - -63.5, -34.5, 2.5, 45, 30
+      - -63.5, -34.5, 2.5, 45, 30
+      - -63.5, -34.5, 2.5, 45, 30
+      - -63.5, -34.5, 2.5, 45, 30
   - name: <yellow><lang:firefighters.factory_3>
     start: -56, -52, -80
     end: -34, -41, -58

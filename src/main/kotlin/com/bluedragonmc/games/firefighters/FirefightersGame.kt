@@ -1,10 +1,7 @@
 package com.bluedragonmc.games.firefighters
 
 import com.bluedragonmc.games.firefighters.item.SprayItem
-import com.bluedragonmc.games.firefighters.module.BurnableRegionsModule
-import com.bluedragonmc.games.firefighters.module.CustomItemsModule
-import com.bluedragonmc.games.firefighters.module.FireSpreadModule
-import com.bluedragonmc.games.firefighters.module.add
+import com.bluedragonmc.games.firefighters.module.*
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.event.GameStartEvent
 import com.bluedragonmc.server.event.PlayerJoinGameEvent
@@ -23,15 +20,26 @@ import net.kyori.adventure.text.format.TextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.MinecraftServer
 import net.minestom.server.component.DataComponents
+import net.minestom.server.coordinate.BlockVec
+import net.minestom.server.coordinate.Pos
+import net.minestom.server.entity.Entity
+import net.minestom.server.entity.EntityType
 import net.minestom.server.entity.GameMode
+import net.minestom.server.entity.Player
+import net.minestom.server.entity.metadata.display.BlockDisplayMeta
 import net.minestom.server.event.EventDispatcher
 import net.minestom.server.event.EventListener
 import net.minestom.server.event.instance.InstanceTickEvent
 import net.minestom.server.event.player.PlayerBlockInteractEvent
+import net.minestom.server.event.player.PlayerChatEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
 import java.nio.file.Paths
+import java.time.Duration
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.random.Random
 
 class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
@@ -202,6 +210,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             }
         }
 
+        use(CutsceneModule())
+
         use(FireSpreadModule())
 
         val binding = getModule<SidebarModule>().bind { player ->
@@ -260,6 +270,66 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 it.player.gameMode = GameMode.CREATIVE
             }
         }
+
+        handleEvent<PlayerChatEvent> {
+            explodeRegion(it.player, "burnableRegionsStage1")
+        }
+    }
+
+    fun explodeRegion(player: Player, regionName: String) {
+        val stepsPerCurve = 7
+        val msPerPoint = 300L
+        val numPointsBeforeExplosion = 3
+        val instance = player.instance
+        val region = getModuleOrNull<ConfigModule>()?.getConfig()?.node(regionName)?.childrenList()?.get(1) ?: return
+        val points = region.node("cutscene")?.getList(Pos::class.java) ?: return
+        val pos1 = region.node("start").get(Pos::class.java) ?: return
+        val pos2 = region.node("end").get(Pos::class.java) ?: return
+        getModule<CutsceneModule>().playCutscene(player, this, points, msPerPoint = msPerPoint, stepsPerCurve = stepsPerCurve)
+        MinecraftServer.getSchedulerManager().buildTask {
+            // For each block, have a chance of turning into an entity and exploding and a chance of just disappearing
+            val centerPos = Pos((pos1.x + pos2.x) / 2, pos1.y.coerceAtMost(pos2.y) - 5, (pos1.z + pos2.z) / 2)
+
+            // ----- TODO refactor into util method
+            val minimum = BlockVec(
+                min(pos1.blockX(), pos2.blockX()),
+                min(pos1.blockY(), pos2.blockY()),
+                min(pos1.blockZ(), pos2.blockZ())
+            )
+            val maximum = BlockVec(
+                max(pos1.blockX(), pos2.blockX()),
+                max(pos1.blockY(), pos2.blockY()),
+                max(pos1.blockZ(), pos2.blockZ())
+            )
+            // -----
+
+            for (x in minimum.blockX() .. maximum.blockX()) {
+                for (y in minimum.blockY() .. maximum.blockY()) {
+                    for (z in minimum.blockZ() .. maximum.blockZ()) {
+                        val pos = Pos(x.toDouble(), y.toDouble(), z.toDouble())
+                        val block = instance.getBlock(pos)
+                        if (block.isAir || block.compare(Block.FIRE)) continue
+                        val rand = Random.nextDouble()
+                        if (rand < 0.5) {
+                            instance.setBlock(pos, Block.AIR)
+                        }
+                        if (rand < 0.3) {
+                            // Turn block into an entity and send away from center
+                            Entity(EntityType.BLOCK_DISPLAY).apply {
+                                val meta = entityMeta as BlockDisplayMeta
+                                meta.setBlockState(block)
+                                setInstance(instance, pos)
+                                velocity = pos.sub(centerPos).asVec().mul(5 * rand)
+                                MinecraftServer.getSchedulerManager().buildTask {
+                                    instance.setBlock(position, block)
+                                    remove()
+                                }.delay(Duration.ofMillis(msPerPoint * 20)).schedule()
+                            }
+                        }
+                    }
+                }
+            }
+        }.delay(Duration.ofMillis(msPerPoint * stepsPerCurve * numPointsBeforeExplosion)).schedule().manage(this)
     }
 
     private companion object {
