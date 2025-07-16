@@ -43,6 +43,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         /** The game hasn't started yet, no stages should be enabled */
         class BeforeGameStart : Stage {
             override fun advance(parent: FirefightersGame): Stage {
+                parent.sendMessage(Component.translatable("firefighters.stage_1.start"))
                 // Starting Stage 1
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
                     if ((parent.getModuleOrNull<BurnableRegionsModule>()?.getAverageBurnProportion() ?: 0.0) > 0.99) {
@@ -56,6 +57,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         /** Arsonists trying to burn down the factories */
         class Stage1 : Stage {
             override fun advance(parent: FirefightersGame): Stage {
+                parent.sendMessage(Component.translatable("firefighters.stage_2.start"))
+                parent.getModule<BurnableRegionsModule>().loadFrom(parent, "burnableRegionsStage2")
                 // Stage 1 -> Stage 2
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
                     if ((parent.getModuleOrNull<BurnableRegionsModule>()?.getAverageBurnProportion() ?: 0.0) > 0.99) {
@@ -69,6 +72,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         /** Arsonists trying to spread the fire to the nuclear plant */
         class Stage2 : Stage {
             override fun advance(parent: FirefightersGame): Stage {
+                parent.sendMessage(Component.translatable("firefighters.stage_3.start"))
                 // Stage 2 -> Stage 3
                 return Stage3()
             }
@@ -175,8 +179,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             return@bind list
         }
 
-        use(BurnableRegionsModule("burnableRegionsStage1")) { currentStage is Stage.Stage1 }
-        use(BurnableRegionsModule("burnableRegionsStage2")) { currentStage is Stage.Stage2 }
+        use(BurnableRegionsModule("burnableRegionsStage1")) { currentStage is Stage.Stage1 || currentStage is Stage.Stage2 }
 
         handleEvent<InstanceTickEvent> { event ->
             if (event.instance.worldAge % 3L == 0L) {
@@ -196,6 +199,9 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         handleEvent<PlayerJoinGameEvent> {
             EventDispatcher.call(GameStartEvent(this))
             state = GameState.INGAME
+            MinecraftServer.getSchedulerManager().scheduleNextTick {
+                it.player.gameMode = GameMode.CREATIVE
+            }
         }
     }
 

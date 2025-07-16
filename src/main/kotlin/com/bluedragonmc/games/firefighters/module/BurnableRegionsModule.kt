@@ -58,17 +58,17 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
         }
 
         fun getProportionBurned(): Double {
-            if (totalFlammableBlocks == null || totalFlammableBlocks == 0) {
+            if (totalFlammableBlocks == null) {
                 return 0.0
+            }
+            if (totalFlammableBlocks == 0) {
+                return 1.0
             }
             return 1.0 - (currentFlammableBlocks.toDouble() / totalFlammableBlocks!!.toDouble())
         }
     }
 
-    override fun initialize(
-        parent: Game,
-        eventNode: EventNode<Event>
-    ) {
+    fun loadFrom(parent: Game, configKey: String) {
         regions = parent.getModule<ConfigModule>().getConfig().node(configKey).childrenList().map { child ->
             val name = child.node("name").get(Component::class.java)!!
             val pos1 = child.node("start").get(Pos::class.java)!!
@@ -87,6 +87,13 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
 
             Region(name, minimum, maximum)
         }
+    }
+
+    override fun initialize(
+        parent: Game,
+        eventNode: EventNode<Event>
+    ) {
+        loadFrom(parent, configKey)
 
         eventNode.addListener(InstanceTickEvent::class.java) { event ->
             if (event.instance.worldAge % 20L == 0L) {
