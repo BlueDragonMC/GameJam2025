@@ -8,6 +8,12 @@ burnableRegionsStage1:
   - name: <yellow><lang:firefighters.factory_1>
     start: 34, -35, 36
     end: 12, -53, 16
+    cutscene:
+      - 10.5, -50, 27, -90, 0
+      - -2.5, -49, 27, -90, 0
+      - 0, -30, 52, -135, 30
+      - 0, -30, 52, -135, 30
+      - 0, -30, 52, -135, 30
   - name: <yellow><lang:firefighters.factory_2>
     start: -90, -52, 36
     end: -66, -37, 14
@@ -21,10 +27,28 @@ burnableRegionsStage1:
   - name: <yellow><lang:firefighters.factory_3>
     start: -56, -52, -80
     end: -34, -41, -58
+    cutscene:
+      - -15, -50, -70, 90, 0
+      - -23, -38, -93, 45, 30
+      - -45, -35, -95, 0, 30
+      - -45, -35, -95, 0, 30
+      - -45, -35, -95, 0, 30
   - name: <yellow><lang:firefighters.factory_4>
     start: 11, -52, -79
     end: 33, -41, -57
+    cutscene:
+      - -1.5, -50, -62.5, 0, 0
+      - -5, -39, -72, -80, 20
+      - 1.5, -32, -90, -40, 30
+      - 23, -32, -91, 0, 35
+      - 23, -32, -91, 0, 35
 burnableRegionsStage2:
   - name: <#acfc8d><lang:firefighters.reactor_core>
     start: -7, -32, -33
     end: 4, -20, -45
+    cutscene:
+      - -1.5, -40, -39.5, 0, -90
+      - -1.5, -45, -39.5, 0, -90
+      - -1.5, -50, -39.5, 0, -90
+      - -1.5, -50, -39.5, 0, -90
+      - -1.5, -50, -39.5, 0, -90
