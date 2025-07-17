@@ -28,13 +28,16 @@ import net.minestom.server.component.DataComponents
 import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.coordinate.Vec
-import net.minestom.server.entity.Entity
-import net.minestom.server.entity.EntityType
-import net.minestom.server.entity.GameMode
-import net.minestom.server.entity.Player
+import net.minestom.server.entity.*
+import net.minestom.server.entity.ai.EntityAIGroupBuilder
+import net.minestom.server.entity.ai.goal.FollowTargetGoal
+import net.minestom.server.entity.ai.goal.MeleeAttackGoal
+import net.minestom.server.entity.ai.target.ClosestEntityTarget
+import net.minestom.server.entity.attribute.Attribute
 import net.minestom.server.entity.metadata.display.BlockDisplayMeta
 import net.minestom.server.event.EventDispatcher
 import net.minestom.server.event.EventListener
+import net.minestom.server.event.entity.EntityAttackEvent
 import net.minestom.server.event.instance.InstanceTickEvent
 import net.minestom.server.event.player.PlayerBlockInteractEvent
 import net.minestom.server.instance.block.Block
@@ -47,11 +50,13 @@ import net.minestom.server.network.packet.server.play.ExplosionPacket
 import net.minestom.server.particle.Particle
 import net.minestom.server.registry.RegistryKey
 import net.minestom.server.sound.SoundEvent
+import net.minestom.server.timer.Task
 import net.minestom.server.utils.time.TimeUnit
 import net.minestom.server.world.biome.Biome
 import java.nio.file.Paths
 import java.time.Duration
 import kotlin.random.Random
+import kotlin.random.nextInt
 
 class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
@@ -195,6 +200,27 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 // Stage 2 -> Stage 3
                 parent.setBiome(RegistryKey.unsafeOf("bluedragonmc:zombie"))
 
+                var spawns = 0
+                var task: Task? = null
+                task = MinecraftServer.getSchedulerManager().buildTask {
+                    val pos = BlockVec(Random.nextInt(-100 .. 100), -52, Random.nextInt(-100 .. 100))
+                    val e = EntityCreature(EntityType.ZOMBIE)
+                    e.setInstance(parent.getInstance(), pos)
+                    e.getAttribute(Attribute.MOVEMENT_SPEED).baseValue = 0.15
+
+                    e.aiGroups.add(
+                        EntityAIGroupBuilder()
+                            .addTargetSelector(ClosestEntityTarget(e, 25.0) { it is Player })
+                            .addGoalSelector(FollowTargetGoal(e, Duration.ofSeconds(1)))
+                            .addGoalSelector(MeleeAttackGoal(e, 3.0, Duration.ofSeconds(1)))
+                            .build()
+                    )
+
+                    if (spawns++ > 100) {
+                        task!!.cancel()
+                    }
+                }.repeat(Duration.of(1, TimeUnit.SERVER_TICK)).schedule()
+
                 return Stage3()
             }
         }
@@ -203,6 +229,13 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         class Stage3 : Stage {
             override fun advance(parent: FirefightersGame): Stage {
                 // Ending the game
+
+                for (entity in parent.getInstance().entities) {
+                    if (entity is EntityCreature) {
+                        entity.aiGroups.clear()
+                    }
+                }
+
                 return BeforeGameStart()
             }
         }
@@ -235,6 +268,14 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         use(TeamModule(allowFriendlyFire = false)) { teamModule ->
             teamModule.teams.add(firefightersTeam)
             teamModule.teams.add(arsonistsTeam)
+        }
+
+        handleEvent<EntityAttackEvent> { event ->
+            if (event.entity is EntityCreature && event.target is Player && event.entity.entityType == EntityType.ZOMBIE) {
+                (event.target as Player).health -= 2
+                val delta = event.target.position.sub(event.entity.position).toVec().normalize()
+                OldCombatModule.takeKnockback(delta.x, delta.y, event.target, 0.5)
+            }
         }
 
         onGameStart {
@@ -350,9 +391,6 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         handleEvent<PlayerJoinGameEvent> {
             EventDispatcher.call(GameStartEvent(this))
             state = GameState.INGAME
-            MinecraftServer.getSchedulerManager().scheduleNextTick {
-                it.player.gameMode = GameMode.CREATIVE
-            }
         }
     }
 

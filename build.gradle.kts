@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("com.github.BlueDragonMC.Server:common:763c96917d") {
+    implementation("com.github.BlueDragonMC.Server:common:5693662162") {
         exclude(group = "org.tinylog")
     }
     implementation("net.kyori:adventure-text-minimessage:4.11.0")
