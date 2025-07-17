@@ -333,6 +333,15 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         use(CutsceneModule())
 
+        val powerups = listOf(
+            FLAMETHROWER.item.asPowerup(arsonistsTeam),
+            ItemStack.of(Material.FLINT_AND_STEEL).asPowerup(arsonistsTeam),
+            EXTINGUISHER.item.asPowerup(firefightersTeam)
+        )
+        val powerupSpawnPositions = getModule<ConfigModule>().getConfig().node("powerup", "locations").getList(Pos::class.java) ?: listOf()
+
+        use(PowerupModule(powerups, powerupSpawnPositions, spawnAllOnStart = true))
+
         use(FireSpreadModule(), { System.currentTimeMillis() > explodingUntil })
 
         val binding = getModule<SidebarModule>().bind { player ->
@@ -498,5 +507,13 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 .set(DataComponents.MAX_DAMAGE, 64).build(),
             SprayItem.SprayItemType.FIRE_EXTINGUISH
         )
+
+        fun ItemStack.asPowerup(team: TeamModule.Team? = null) = PowerupModule.Powerup(
+            name = get(DataComponents.CUSTOM_NAME) ?: Component.translatable(material().registry().translationKey()),
+            icon = material(),
+            visibilityRule = { player -> team?.players?.contains(player) ?: true }
+        ) { player ->
+            player.inventory.addItemStack(this)
+        }
     }
 }
