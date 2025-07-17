@@ -57,6 +57,7 @@ class FireSpreadModule : GameModule() {
 
             val hasSupportBelow = instance.getBlock(pos.add(0.0, -1.0, 0.0)).registry().collisionShape().isFaceFull(BlockFace.TOP)
             if (!hasSupportBelow && properties.isEmpty()) {
+                instance.setBlock(pos, Block.AIR)
                 return false
             }
 
