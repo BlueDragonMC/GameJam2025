@@ -30,6 +30,7 @@ import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.Entity
 import net.minestom.server.entity.EntityType
 import net.minestom.server.entity.GameMode
+import net.minestom.server.entity.Player
 import net.minestom.server.entity.metadata.display.BlockDisplayMeta
 import net.minestom.server.event.EventDispatcher
 import net.minestom.server.event.EventListener
@@ -55,6 +56,33 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
     var explodingUntil: Long = 0L // Used to pause fire spread during cutscenes
 
+    fun playerMessage(player: Player, msg: Component): Component {
+        val team = getModule<TeamModule>().getTeam(player)
+        return (team?.scoreboardTeam?.prefix ?: Component.empty()).append(
+            player.name.color(team?.name?.color()).noBold()
+        ).append(Component.text(": ", NamedTextColor.DARK_GRAY).noBold())
+            .append(msg.colorIfAbsent(NamedTextColor.WHITE).noBold().decorate(TextDecoration.ITALIC))
+    }
+
+    private var lastExpoMessages = mutableMapOf<TeamModule.Team, Long>()
+
+    fun expositionChatMessage(team: TeamModule.Team, playerIndex: Int, translationKey: String) {
+        if (team.players.isEmpty()) return
+        var playerIndex = playerIndex
+        if (playerIndex == -1) playerIndex = Random.nextInt(team.players.size)
+
+        val nextMsgTime = (lastExpoMessages[team] ?: 0) + 2_000
+        val delay = if (nextMsgTime < System.currentTimeMillis()) 0 else nextMsgTime - System.currentTimeMillis()
+        lastExpoMessages[team] = System.currentTimeMillis() + delay
+        MinecraftServer.getSchedulerManager().buildTask {
+            team.sendMessage(
+                playerMessage(
+                    team.players[playerIndex % team.players.size], Component.translatable(translationKey)
+                )
+            )
+        }.delay(Duration.ofMillis(delay)).schedule().manage(this)
+    }
+
     sealed interface Stage {
 
         /** Go to the next stage, returning the next stage */
@@ -64,6 +92,21 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         class BeforeGameStart : Stage {
             override fun advance(parent: FirefightersGame): Stage {
                 // Starting Stage 1
+
+                // Exposition chat messages
+                for (i in 1..3) {
+                    parent.expositionChatMessage(
+                        parent.arsonistsTeam, 0, "firefighters.stage_1.player_chat.arsonists.$i"
+                    )
+                    parent.expositionChatMessage(
+                        parent.firefightersTeam, 0, "firefighters.stage_1.player_chat.firefighters.$i"
+                    )
+                }
+
+                parent.expositionChatMessage(
+                    parent.firefightersTeam, 0, "firefighters.stage_1.player_chat.firefighters.4"
+                )
+
                 val burnedRegions = mutableListOf<BurnableRegionsModule.Region>()
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
                     // Advance to next stage when all flammable blocks are gone
@@ -73,9 +116,25 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     }
                     // Play explosion animation when a region reaches 100% burned
                     for ((i, region) in regions.getRegions().withIndex()) {
-                        if (region.getProportionBurned() == 1.0 && !burnedRegions.contains(region)) {
+                        if (region.getProportionBurned() == 1.0 && !burnedRegions.contains(region) && System.currentTimeMillis() > parent.explodingUntil) {
                             burnedRegions.add(region)
                             parent.explodeRegion("burnableRegionsStage1", i)
+
+                            parent.expositionChatMessage(
+                                parent.arsonistsTeam,
+                                -1,
+                                "firefighters.stage_1.player_chat.arsonists.${3 + burnedRegions.size}"
+                            )
+                            parent.expositionChatMessage(
+                                parent.firefightersTeam,
+                                -1,
+                                "firefighters.stage_1.player_chat.firefighters.${4 + burnedRegions.size}"
+                            )
+                            if (burnedRegions.size == 4) { // Last one has an extra chat message from the arsonists
+                                parent.expositionChatMessage(
+                                    parent.arsonistsTeam, -1, "firefighters.stage_1.player_chat.arsonists.8"
+                                )
+                            }
                         }
                     }
                 }.expireWhen { parent.currentStage !is Stage1 }.build())
@@ -97,7 +156,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     }
                     // Play explosion animation when a region reaches 100% burned
                     for ((i, region) in regions.getRegions().withIndex()) {
-                        if (region.getProportionBurned() == 1.0 && !burnedRegions.contains(region)) {
+                        if (region.getProportionBurned() == 1.0 && !burnedRegions.contains(region) && System.currentTimeMillis() > parent.explodingUntil) {
                             burnedRegions.add(region)
                             parent.explodeRegion("burnableRegionsStage2", i)
                         }
@@ -106,22 +165,16 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
                 parent.firefightersTeam.sendMessage(
                     (Component.translatable(
-                        "firefighters.stage_2.start.firefighters",
-                        NamedTextColor.RED,
-                        TextDecoration.BOLD
+                        "firefighters.stage_2.start.firefighters", NamedTextColor.RED, TextDecoration.BOLD
                     ) + Component.newline() + Component.translatable(
-                        "firefighters.stage_2.start.firefighters.description",
-                        NamedTextColor.GRAY
+                        "firefighters.stage_2.start.firefighters.description", NamedTextColor.GRAY
                     ).decoration(TextDecoration.BOLD, false)).surroundWithSeparators()
                 )
                 parent.arsonistsTeam.sendMessage(
                     (Component.translatable(
-                        "firefighters.stage_2.start.arsonists",
-                        NamedTextColor.GREEN,
-                        TextDecoration.BOLD
+                        "firefighters.stage_2.start.arsonists", NamedTextColor.GREEN, TextDecoration.BOLD
                     ) + Component.newline() + Component.translatable(
-                        "firefighters.stage_2.start.arsonists.description",
-                        NamedTextColor.GRAY
+                        "firefighters.stage_2.start.arsonists.description", NamedTextColor.GRAY
                     ).decoration(TextDecoration.BOLD, false)).surroundWithSeparators()
                 )
 
@@ -190,22 +243,16 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
             firefightersTeam.sendMessage(
                 (Component.translatable(
-                    "firefighters.team_assignment.firefighters",
-                    firefightersTeam.name.color(),
-                    TextDecoration.BOLD
+                    "firefighters.team_assignment.firefighters", firefightersTeam.name.color(), TextDecoration.BOLD
                 ) + Component.newline() + Component.translatable(
-                    "firefighters.team_assignment.firefighters.description",
-                    NamedTextColor.GRAY
+                    "firefighters.team_assignment.firefighters.description", NamedTextColor.GRAY
                 ).decoration(TextDecoration.BOLD, false)).surroundWithSeparators()
             )
             arsonistsTeam.sendMessage(
                 (Component.translatable(
-                    "firefighters.team_assignment.arsonists",
-                    arsonistsTeam.name.color(),
-                    TextDecoration.BOLD
+                    "firefighters.team_assignment.arsonists", arsonistsTeam.name.color(), TextDecoration.BOLD
                 ) + Component.newline() + Component.translatable(
-                    "firefighters.team_assignment.arsonists.description",
-                    NamedTextColor.GRAY
+                    "firefighters.team_assignment.arsonists.description", NamedTextColor.GRAY
                 ).decoration(TextDecoration.BOLD, false)).surroundWithSeparators()
             )
         }
@@ -239,7 +286,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         use(CutsceneModule())
 
-        use(FireSpreadModule(), { System.currentTimeMillis() > explodingUntil})
+        use(FireSpreadModule(), { System.currentTimeMillis() > explodingUntil })
 
         val binding = getModule<SidebarModule>().bind { player ->
             if (state != GameState.INGAME) return@bind getStatusSection()
@@ -285,10 +332,12 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         }
 
         onGameStart {
-            if (currentStage is Stage.BeforeGameStart) { // sanity check, should always be true
-                currentStage = currentStage.advance(this)
-            } else {
-                currentStage = Stage.Stage1()
+            MinecraftServer.getSchedulerManager().scheduleNextTick {
+                if (currentStage is Stage.BeforeGameStart) { // sanity check, should always be true
+                    currentStage = currentStage.advance(this)
+                } else {
+                    currentStage = Stage.Stage1()
+                }
             }
         }
 
@@ -316,11 +365,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         for (player in players) {
             getModule<CutsceneModule>().playCutscene(
-                player,
-                this,
-                points,
-                msPerPoint = msPerPoint,
-                stepsPerCurve = stepsPerCurve
+                player, this, points, msPerPoint = msPerPoint, stepsPerCurve = stepsPerCurve
             )
         }
         MinecraftServer.getSchedulerManager().buildTask {
