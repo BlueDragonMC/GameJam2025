@@ -6,8 +6,8 @@ world:
     - 11, -52, 27, 90, 0
 burnableRegionsStage1:
   - name: <yellow><lang:firefighters.factory_1>
-    start: 34, -35, 36
-    end: 12, -53, 16
+    start: 40, -22, 40
+    end: 9, -53, 13
     cutscene:
       - 10.5, -50, 27, -90, 0
       - -2.5, -49, 27, -90, 0

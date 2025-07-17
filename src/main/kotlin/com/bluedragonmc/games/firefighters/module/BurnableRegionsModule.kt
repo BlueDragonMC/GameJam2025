@@ -22,7 +22,7 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
 
     private var regions: List<Region> = listOf()
 
-    private data class Region(val name: Component, val start: BlockVec, val end: BlockVec) {
+    data class Region(val name: Component, val start: BlockVec, val end: BlockVec) {
 
         /**
          * The total number of flammable blocks in the region.
@@ -111,4 +111,6 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
         if (regions.any { it.totalFlammableBlocks == null }) return -1
         return regions.sumOf { it.currentFlammableBlocks }
     }
+
+    fun getRegions(): List<Region> = regions
 }

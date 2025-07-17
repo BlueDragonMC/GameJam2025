@@ -30,13 +30,11 @@ import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.Entity
 import net.minestom.server.entity.EntityType
 import net.minestom.server.entity.GameMode
-import net.minestom.server.entity.Player
 import net.minestom.server.entity.metadata.display.BlockDisplayMeta
 import net.minestom.server.event.EventDispatcher
 import net.minestom.server.event.EventListener
 import net.minestom.server.event.instance.InstanceTickEvent
 import net.minestom.server.event.player.PlayerBlockInteractEvent
-import net.minestom.server.event.player.PlayerChatEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
@@ -55,6 +53,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
     val arsonistsTeam =
         TeamModule.Team(Component.translatable("firefighters.team.arsonists", TextColor.color(252, 121, 50)))
 
+    var explodingUntil: Long = 0L // Used to pause fire spread during cutscenes
+
     sealed interface Stage {
 
         /** Go to the next stage, returning the next stage */
@@ -64,9 +64,19 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         class BeforeGameStart : Stage {
             override fun advance(parent: FirefightersGame): Stage {
                 // Starting Stage 1
+                val burnedRegions = mutableListOf<BurnableRegionsModule.Region>()
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
-                    if (parent.getModuleOrNull<BurnableRegionsModule>()!!.getFlammableBlocksRemaining() == 0) {
+                    // Advance to next stage when all flammable blocks are gone
+                    val regions = parent.getModuleOrNull<BurnableRegionsModule>() ?: return@handler
+                    if (regions.getFlammableBlocksRemaining() == 0) {
                         parent.currentStage = parent.currentStage.advance(parent)
+                    }
+                    // Play explosion animation when a region reaches 100% burned
+                    for ((i, region) in regions.getRegions().withIndex()) {
+                        if (region.getProportionBurned() == 1.0 && !burnedRegions.contains(region)) {
+                            burnedRegions.add(region)
+                            parent.explodeRegion("burnableRegionsStage1", i)
+                        }
                     }
                 }.expireWhen { parent.currentStage !is Stage1 }.build())
                 return Stage1()
@@ -78,9 +88,19 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             override fun advance(parent: FirefightersGame): Stage {
                 parent.getModule<BurnableRegionsModule>().loadFrom(parent, "burnableRegionsStage2")
                 // Stage 1 -> Stage 2
+                val burnedRegions = mutableListOf<BurnableRegionsModule.Region>()
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
-                    if (parent.getModuleOrNull<BurnableRegionsModule>()!!.getFlammableBlocksRemaining() == 0) {
+                    val regions = parent.getModuleOrNull<BurnableRegionsModule>() ?: return@handler
+                    // Advance to next stage when all flammable blocks are gone
+                    if (regions.getFlammableBlocksRemaining() == 0) {
                         parent.currentStage = parent.currentStage.advance(parent)
+                    }
+                    // Play explosion animation when a region reaches 100% burned
+                    for ((i, region) in regions.getRegions().withIndex()) {
+                        if (region.getProportionBurned() == 1.0 && !burnedRegions.contains(region)) {
+                            burnedRegions.add(region)
+                            parent.explodeRegion("burnableRegionsStage2", i)
+                        }
                     }
                 }.expireWhen { parent.currentStage !is Stage2 }.build())
 
@@ -219,7 +239,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         use(CutsceneModule())
 
-        use(FireSpreadModule())
+        use(FireSpreadModule(), { System.currentTimeMillis() > explodingUntil})
 
         val binding = getModule<SidebarModule>().bind { player ->
             if (state != GameState.INGAME) return@bind getStatusSection()
@@ -253,7 +273,9 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             return@bind list
         }
 
-        use(BurnableRegionsModule("burnableRegionsStage1")) { currentStage is Stage.Stage1 || currentStage is Stage.Stage2 }
+        use(
+            BurnableRegionsModule("burnableRegionsStage1"),
+            { currentStage is Stage.Stage1 || currentStage is Stage.Stage2 })
 
         handleEvent<InstanceTickEvent> { event ->
             if (event.instance.worldAge % 2L == 0L) {
@@ -277,28 +299,30 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 it.player.gameMode = GameMode.CREATIVE
             }
         }
-
-        handleEvent<PlayerChatEvent> {
-            explodeRegion(it.player, "burnableRegionsStage1")
-        }
     }
 
-    fun explodeRegion(player: Player, regionName: String) {
+    fun explodeRegion(configKey: String, index: Int) {
         val stepsPerCurve = 7
         val msPerPoint = 300L
         val numPointsBeforeExplosion = 3
-        val instance = player.instance
-        val region = getModuleOrNull<ConfigModule>()?.getConfig()?.node(regionName)?.childrenList()?.get(1) ?: return
+        val instance = getInstance()
+
+        val region = getModuleOrNull<ConfigModule>()?.getConfig()?.node(configKey)?.childrenList()?.get(index) ?: return
         val points = region.node("cutscene")?.getList(Pos::class.java) ?: return
         val pos1 = region.node("start").get(Pos::class.java) ?: return
         val pos2 = region.node("end").get(Pos::class.java) ?: return
-        getModule<CutsceneModule>().playCutscene(
-            player,
-            this,
-            points,
-            msPerPoint = msPerPoint,
-            stepsPerCurve = stepsPerCurve
-        )
+
+        explodingUntil = System.currentTimeMillis() + msPerPoint * stepsPerCurve * points.size
+
+        for (player in players) {
+            getModule<CutsceneModule>().playCutscene(
+                player,
+                this,
+                points,
+                msPerPoint = msPerPoint,
+                stepsPerCurve = stepsPerCurve
+            )
+        }
         MinecraftServer.getSchedulerManager().buildTask {
             // For each block, have a chance of turning into an entity and exploding and a chance of just disappearing
             val centerPos = Vec((pos1.x + pos2.x) / 2, pos1.y.coerceAtMost(pos2.y) - 5, (pos1.z + pos2.z) / 2)
