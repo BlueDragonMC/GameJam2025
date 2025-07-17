@@ -1,9 +1,12 @@
 package com.bluedragonmc.example.server
 
 import com.bluedragonmc.server.CustomPlayer
+import com.bluedragonmc.server.Game
+import com.bluedragonmc.server.module.minigame.TeamModule
 import com.bluedragonmc.server.utils.buildComponent
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.event.Event
 import net.minestom.server.event.EventFilter
 import net.minestom.server.event.EventNode
@@ -16,8 +19,13 @@ object GlobalChatFormat {
         eventNode.addChild(child)
         child.addListener(PlayerChatEvent::class.java) { event ->
             val player = event.player as CustomPlayer
+
+            val team = Game.findGame(event.player)?.getModuleOrNull<TeamModule>()?.getTeam(event.player)
+            val nameColor = team?.name?.color()
+            val prefix = team?.scoreboardTeam?.prefix
+
             val component = buildComponent {
-                +player.name
+                +(prefix ?: Component.empty()).append(player.name.decoration(TextDecoration.BOLD, false).let { if (nameColor != null) it.color(nameColor) else it })
                 +Component.text(": ", NamedTextColor.DARK_GRAY)
                 +Component.text(event.rawMessage, NamedTextColor.WHITE)
             }
