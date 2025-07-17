@@ -14,13 +14,18 @@ import com.bluedragonmc.server.service.Database
 import com.bluedragonmc.server.service.Messaging
 import com.bluedragonmc.server.service.Permissions
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import net.minestom.server.MinecraftServer
+import net.minestom.server.color.Color
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
 import net.minestom.server.extras.MojangAuth
 import net.minestom.server.tag.Tag
+import net.minestom.server.world.biome.Biome
+import net.minestom.server.world.biome.BiomeEffects
 
 val GAME_CLASS = FirefightersGame::class
+
 /** The name of the map folder in worlds/gameName/ */
 const val MAP_NAME = "Reactor"
 const val SERVER_ADDRESS = "0.0.0.0"
@@ -46,6 +51,18 @@ fun main() {
     // Prevent the game library from automatically removing the spawning instance
     val tag = Tag.Long("instance_inactive_since")
     spawningInstance.setTag(tag, Long.MAX_VALUE)
+
+    MinecraftServer.getBiomeRegistry().register(
+        "bluedragonmc:zombie",
+        Biome.builder().effects(BiomeEffects.builder()
+            .waterColor(Color(0x3F76E4))
+            .waterFogColor(Color(0x50533))
+            // ^ Same as plains
+            .fogColor(Color(0x39ef97))
+            .skyColor(NamedTextColor.GREEN).build()
+            // ^ Modified
+        ).build()
+    )
 
     MinecraftServer.getGlobalEventHandler().let { eventHandler ->
         GlobalChatFormat.hook(eventHandler)

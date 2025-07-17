@@ -17,6 +17,7 @@ import com.bluedragonmc.server.module.vanilla.ItemDropModule
 import com.bluedragonmc.server.module.vanilla.ItemPickupModule
 import com.bluedragonmc.server.module.vanilla.NaturalRegenerationModule
 import com.bluedragonmc.server.utils.*
+import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
@@ -37,12 +38,17 @@ import net.minestom.server.event.EventListener
 import net.minestom.server.event.instance.InstanceTickEvent
 import net.minestom.server.event.player.PlayerBlockInteractEvent
 import net.minestom.server.instance.block.Block
+import net.minestom.server.instance.palette.Palette
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
+import net.minestom.server.network.NetworkBuffer
+import net.minestom.server.network.packet.server.play.ChunkBiomesPacket
 import net.minestom.server.network.packet.server.play.ExplosionPacket
 import net.minestom.server.particle.Particle
+import net.minestom.server.registry.RegistryKey
 import net.minestom.server.sound.SoundEvent
 import net.minestom.server.utils.time.TimeUnit
+import net.minestom.server.world.biome.Biome
 import java.nio.file.Paths
 import java.time.Duration
 import kotlin.random.Random
@@ -187,6 +193,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             override fun advance(parent: FirefightersGame): Stage {
                 parent.sendMessage(Component.translatable("firefighters.stage_3.start"))
                 // Stage 2 -> Stage 3
+                parent.setBiome(RegistryKey.unsafeOf("bluedragonmc:zombie"))
+
                 return Stage3()
             }
         }
@@ -217,9 +225,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         use(OldCombatModule())
         use(PlayerResetModule(defaultGameMode = GameMode.SURVIVAL))
         use(SidebarModule(name))
-        use(SpawnpointModule(SpawnpointModule.ConfigSpawnpointProvider())) {
-
-        }
+        use(SpawnpointModule(SpawnpointModule.ConfigSpawnpointProvider()))
         use(SpectatorModule(spectateOnDeath = false, spectateOnLeave = true))
         use(TimedRespawnModule(seconds = 5))
         use(VoidDeathModule(threshold = -60.0))
@@ -412,6 +418,31 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 }
             }
         }.delay(Duration.ofMillis(msPerPoint * stepsPerCurve * numPointsBeforeExplosion)).schedule().manage(this)
+    }
+
+    private fun setBiome(biome: RegistryKey<Biome>) {
+        val biomeId = MinecraftServer.getBiomeRegistry().getId(biome)
+        val instance = getInstance()
+        val packetData = mutableListOf<ChunkBiomesPacket.ChunkBiomeData>()
+        for (x in -12..5) {
+            for (z in -12..5) {
+                val chunk = getInstance().getChunk(x, z) ?: continue
+                val chunkBiomes = ByteArrayList.of()
+                chunk.sections.forEachIndexed { y, section ->
+                    section.biomePalette().fill(biomeId)
+                    instance.invalidateSection(x, y + chunk.minSection, z)
+                    val sectionBiomes = NetworkBuffer.makeArray { buffer ->
+                        Palette.biomeSerializer(section.biomePalette().count()).write(buffer, section.biomePalette())
+                    }
+                    chunkBiomes.addElements(chunkBiomes.size, sectionBiomes)
+                }
+                val arr = ByteArray(chunkBiomes.size)
+                chunkBiomes.toArray(arr)
+                packetData.add(ChunkBiomesPacket.ChunkBiomeData(x, z, arr))
+            }
+        }
+
+        sendGroupedPacket(ChunkBiomesPacket(packetData))
     }
 
     private companion object {
