@@ -319,7 +319,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         handleEvent<PlayerBlockInteractEvent> { event ->
             if (event.isBlockingItemUse) return@handleEvent
-            if (event.player.getItemInHand(event.hand).material() == Material.FLINT_AND_STEEL) {
+            if ((event.player.getItemInHand(event.hand).material() == Material.FLINT_AND_STEEL) or (event.player.getItemInHand(event.hand).material() == Material.TORCH)) {
                 val direction = event.blockFace.toDirection()
                 val blockPos = event.blockPosition.add(direction)
                 if (event.instance.getBlock(
@@ -336,6 +336,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         val powerups = listOf(
             FLAMETHROWER.item.asPowerup(arsonistsTeam, NamedTextColor.RED),
             ItemStack.of(Material.FLINT_AND_STEEL).asPowerup(arsonistsTeam, NamedTextColor.RED),
+            ItemStack.of(Material.TORCH).with(DataComponents.CUSTOM_NAME, Component.text("Matches", NamedTextColor.RED)).asPowerup(arsonistsTeam, NamedTextColor.RED),
             EXTINGUISHER.item.asPowerup(firefightersTeam, NamedTextColor.AQUA)
         )
         val powerupSpawnPositions = getModule<ConfigModule>().getConfig().node("powerup", "locations").getList(Pos::class.java) ?: listOf()
