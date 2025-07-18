@@ -486,11 +486,15 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         eventNode.addListener(PlayerTickEvent::class.java) { event ->
             val player = event.player;
-            if (playerOnFire(player)) {
-                player.fireTicks = 20;
-            }
+                if (playerOnFire(player) && !player.isOnFire) {
+                    player.fireTicks += 200;
+                }
 
-            // TODO figure out how to apply damage to the player without instantly killing them.
+                if (player.isOnFire) {
+                    if (player.fireTicks % 20 == 0) {
+                        player.damage(DamageType.ON_FIRE, 1.0F)
+                    }
+                }
         }
 
         onGameStart {
