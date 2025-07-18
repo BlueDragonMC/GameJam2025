@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.1.10"
+    id("com.github.johnrengelman.shadow") version "7.0.0"
 }
 
 group = "com.bluedragonmc.example"
@@ -8,6 +9,7 @@ version = "1.0-SNAPSHOT"
 repositories {
     mavenCentral()
     maven("https://jitpack.io")
+    maven("https://reposilite.atlasengine.ca/public")
 }
 
 dependencies {
@@ -31,3 +33,9 @@ tasks.test {
 kotlin {
     jvmToolchain(21)
 }
+
+tasks.shadowJar {
+    mergeServiceFiles()
+}
+
+tasks["build"].dependsOn(tasks["shadowJar"])
