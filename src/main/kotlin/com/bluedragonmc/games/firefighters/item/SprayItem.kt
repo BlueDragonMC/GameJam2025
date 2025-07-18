@@ -3,6 +3,7 @@ package com.bluedragonmc.games.firefighters.item
 import com.bluedragonmc.games.firefighters.module.CustomItem
 import com.bluedragonmc.games.firefighters.module.FireSpreadModule
 import com.bluedragonmc.server.utils.toVec
+import net.kyori.adventure.sound.Sound
 import net.minestom.server.MinecraftServer
 import net.minestom.server.component.DataComponents
 import net.minestom.server.coordinate.Point
@@ -15,6 +16,7 @@ import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
 import net.minestom.server.network.packet.server.play.ParticlePacket
 import net.minestom.server.particle.Particle
+import net.minestom.server.sound.SoundEvent
 import net.minestom.server.utils.block.BlockIterator
 import java.time.Duration
 import kotlin.random.Random
@@ -79,12 +81,14 @@ class SprayItem(override val itemId: String, item: ItemStack, private val sprayI
                 val targetBlock = instance.getBlock(targetBlockPos, Block.Getter.Condition.TYPE)
                 when (sprayItemType) {
                     SprayItemType.FIRE_EXTINGUISH -> {
+                        instance.playSound(Sound.sound(SoundEvent.BLOCK_FIRE_EXTINGUISH, Sound.Source.BLOCK, 0.5f, 1.0f))
                         if (targetBlock.compare(Block.FIRE)) {
                             instance.setBlock(targetBlockPos, Block.AIR)
                         }
                     }
 
                     SprayItemType.FIRE_SPREAD -> {
+                        instance.playSound(Sound.sound(SoundEvent.ENTITY_BLAZE_SHOOT, Sound.Source.BLOCK, 0.5f, 1.0f))
                         if (targetBlock.compare(Block.FIRE)) return@buildTask
                         if (!FireSpreadModule.hasFullAdjacentFace(
                                 instance,
