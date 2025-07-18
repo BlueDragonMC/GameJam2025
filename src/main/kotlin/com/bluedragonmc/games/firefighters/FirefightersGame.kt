@@ -6,6 +6,7 @@ import com.bluedragonmc.games.firefighters.module.*
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.event.GameStartEvent
 import com.bluedragonmc.server.event.PlayerJoinGameEvent
+import com.bluedragonmc.server.module.combat.CustomDeathMessageModule
 import com.bluedragonmc.server.module.combat.OldCombatModule
 import com.bluedragonmc.server.module.config.ConfigModule
 import com.bluedragonmc.server.module.gameplay.SidebarModule
@@ -338,6 +339,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         use(VoteStartModule(minPlayers = 1))
 //        use(VoteStartModule(minPlayers = 1, countdownSeconds = 5))
         use(WinModule())
+        use(CustomDeathMessageModule())
 
 
         handleEvent<PlayerJoinGameEvent> {
