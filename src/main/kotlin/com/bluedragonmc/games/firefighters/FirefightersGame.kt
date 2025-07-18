@@ -334,9 +334,9 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         use(CutsceneModule())
 
         val powerups = listOf(
-            FLAMETHROWER.item.asPowerup(arsonistsTeam),
-            ItemStack.of(Material.FLINT_AND_STEEL).asPowerup(arsonistsTeam),
-            EXTINGUISHER.item.asPowerup(firefightersTeam)
+            FLAMETHROWER.item.asPowerup(arsonistsTeam, NamedTextColor.RED),
+            ItemStack.of(Material.FLINT_AND_STEEL).asPowerup(arsonistsTeam, NamedTextColor.RED),
+            EXTINGUISHER.item.asPowerup(firefightersTeam, NamedTextColor.AQUA)
         )
         val powerupSpawnPositions = getModule<ConfigModule>().getConfig().node("powerup", "locations").getList(Pos::class.java) ?: listOf()
 
@@ -510,12 +510,14 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             SprayItem.SprayItemType.FIRE_EXTINGUISH
         )
 
-        fun ItemStack.asPowerup(team: TeamModule.Team? = null) = PowerupModule.Powerup(
+        fun ItemStack.asPowerup(team: TeamModule.Team? = null, glowColor: NamedTextColor) = PowerupModule.Powerup(
             name = get(DataComponents.CUSTOM_NAME) ?: Component.translatable(material().registry().translationKey()),
             icon = material(),
-            visibilityRule = { player -> team?.players?.contains(player) ?: true }
-        ) { player ->
-            player.inventory.addItemStack(this)
-        }
+            visibilityRule = { player -> team?.players?.contains(player) ?: true },
+            { player ->
+                player.inventory.addItemStack(this)
+            },
+            glowColor = glowColor
+        )
     }
 }

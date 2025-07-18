@@ -81,14 +81,14 @@ class SprayItem(override val itemId: String, item: ItemStack, private val sprayI
                 val targetBlock = instance.getBlock(targetBlockPos, Block.Getter.Condition.TYPE)
                 when (sprayItemType) {
                     SprayItemType.FIRE_EXTINGUISH -> {
-                        instance.playSound(Sound.sound(SoundEvent.BLOCK_FIRE_EXTINGUISH, Sound.Source.BLOCK, 0.5f, 1.0f))
+                        instance.playSound(Sound.sound(SoundEvent.BLOCK_FIRE_EXTINGUISH, Sound.Source.BLOCK, 0.5f, 1.0f), player)
                         if (targetBlock.compare(Block.FIRE)) {
                             instance.setBlock(targetBlockPos, Block.AIR)
                         }
                     }
 
                     SprayItemType.FIRE_SPREAD -> {
-                        instance.playSound(Sound.sound(SoundEvent.ENTITY_BLAZE_SHOOT, Sound.Source.BLOCK, 0.5f, 1.0f))
+                        instance.playSound(Sound.sound(SoundEvent.ENTITY_BLAZE_SHOOT, Sound.Source.BLOCK, 0.5f, 1.0f), player)
                         if (targetBlock.compare(Block.FIRE)) return@buildTask
                         if (!FireSpreadModule.hasFullAdjacentFace(
                                 instance,
