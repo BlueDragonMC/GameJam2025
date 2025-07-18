@@ -1,5 +1,6 @@
 package com.bluedragonmc.games.firefighters
 
+import com.bluedragonmc.games.firefighters.item.FireStartingItem
 import com.bluedragonmc.games.firefighters.item.SprayItem
 import com.bluedragonmc.games.firefighters.module.*
 import com.bluedragonmc.server.Game
@@ -16,7 +17,6 @@ import com.bluedragonmc.server.module.vanilla.*
 import com.bluedragonmc.server.utils.*
 import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import net.kyori.adventure.key.Key
-import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
@@ -33,13 +33,11 @@ import net.minestom.server.entity.ai.goal.FollowTargetGoal
 import net.minestom.server.entity.ai.goal.MeleeAttackGoal
 import net.minestom.server.entity.ai.target.ClosestEntityTarget
 import net.minestom.server.entity.attribute.Attribute
-import net.minestom.server.entity.damage.Damage
 import net.minestom.server.entity.damage.DamageType
 import net.minestom.server.entity.metadata.display.BlockDisplayMeta
 import net.minestom.server.event.EventListener
 import net.minestom.server.event.entity.EntityAttackEvent
 import net.minestom.server.event.instance.InstanceTickEvent
-import net.minestom.server.event.player.PlayerBlockInteractEvent
 import net.minestom.server.event.player.PlayerDeathEvent
 import net.minestom.server.event.player.PlayerTickEvent
 import net.minestom.server.instance.block.Block
@@ -162,7 +160,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             override fun advance(parent: FirefightersGame): Stage {
                 parent.getModule<BurnableRegionsModule>().loadFrom(parent, "burnableRegionsStage2")
                 // Stage 1 -> Stage 2
-                val almostBurnedRegions = mutableListOf<BurnableRegionsModule.Region>() // used for the "almost there" chat message
+                val almostBurnedRegions =
+                    mutableListOf<BurnableRegionsModule.Region>() // used for the "almost there" chat message
                 val burnedRegions = mutableListOf<BurnableRegionsModule.Region>()
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
                     val regions = parent.getModuleOrNull<BurnableRegionsModule>() ?: return@handler
@@ -263,7 +262,9 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     }
                 }.repeat(Duration.of(1, TimeUnit.SERVER_TICK)).schedule()
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler { event ->
-                    val aliveArsonists = parent.arsonistsTeam.players.filter { player -> !parent.getModule<SpectatorModule>().isSpectating(player) }
+                    val aliveArsonists = parent.arsonistsTeam.players.filter { player ->
+                        !parent.getModule<SpectatorModule>().isSpectating(player)
+                    }
                     if (aliveArsonists.isEmpty()) {
                         // The zombies or firefighters have killed all the arsonists. They win!
                         parent.currentStage = parent.currentStage.advance(parent)
@@ -334,7 +335,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         handleEvent<PlayerJoinGameEvent> {
             MinecraftServer.getSchedulerManager().scheduleNextTick {
-                it.player.gameMode = GameMode.SURVIVAL
+                it.player.gameMode = GameMode.ADVENTURE
             }
         }
 
@@ -380,23 +381,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         use(CustomItemsModule()) {
             it.addCustomItem(FLAMETHROWER)
             it.addCustomItem(EXTINGUISHER)
-        }
-
-        handleEvent<PlayerBlockInteractEvent> { event ->
-            if (event.isBlockingItemUse) return@handleEvent
-            if ((event.player.getItemInHand(event.hand)
-                    .material() == Material.FLINT_AND_STEEL) || (event.player.getItemInHand(event.hand)
-                    .material() == Material.TORCH)
-            ) {
-                val direction = event.blockFace.toDirection()
-                val blockPos = event.blockPosition.add(direction)
-                if (event.instance.getBlock(
-                        blockPos, Block.Getter.Condition.TYPE
-                    ).isAir && FireSpreadModule.hasFullAdjacentFace(event.instance, blockPos)
-                ) {
-                    event.instance.setBlock(blockPos, Block.FIRE)
-                }
-            }
+            it.addCustomItem(FLINT_AND_STEEL)
+            it.addCustomItem(MATCHES)
         }
 
         use(CutsceneModule()) { cutsceneModule ->
@@ -406,20 +392,31 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 val firefighterCutscene = introCutsceneNode.node("firefighter").getList(Pos::class.java)
                 if (firefighterCutscene != null)
                     firefightersTeam.players.forEach { player ->
-                        cutsceneModule.playCutscene(player, this, firefighterCutscene, stepsPerCurve = 10, msPerPoint = 100)
+                        cutsceneModule.playCutscene(
+                            player,
+                            this,
+                            firefighterCutscene,
+                            stepsPerCurve = 10,
+                            msPerPoint = 100
+                        )
                     }
                 if (arsonistCutscene != null)
                     arsonistsTeam.players.forEach { player ->
-                        cutsceneModule.playCutscene(player, this, arsonistCutscene, stepsPerCurve = 10, msPerPoint = 100)
+                        cutsceneModule.playCutscene(
+                            player,
+                            this,
+                            arsonistCutscene,
+                            stepsPerCurve = 10,
+                            msPerPoint = 100
+                        )
                     }
             }
         }
 
         val powerups = listOf(
             FLAMETHROWER.item.asPowerup(arsonistsTeam, NamedTextColor.RED),
-            ItemStack.of(Material.FLINT_AND_STEEL).asPowerup(arsonistsTeam, NamedTextColor.RED),
-            ItemStack.of(Material.TORCH).with(DataComponents.CUSTOM_NAME, Component.text("Matches", NamedTextColor.RED))
-                .asPowerup(arsonistsTeam, NamedTextColor.RED),
+            FLINT_AND_STEEL.item.asPowerup(arsonistsTeam, NamedTextColor.RED),
+            MATCHES.item.asPowerup(arsonistsTeam, NamedTextColor.RED),
             EXTINGUISHER.item.asPowerup(firefightersTeam, NamedTextColor.AQUA)
         )
         val powerupSpawnPositions =
@@ -448,7 +445,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     val regions = getModule<BurnableRegionsModule>()
                     val phase = (getInstance().worldAge % 20L) / 20.0
                     val colors = "#a10000:#ea2300:#ff8100:#f25500:#d80000"
-                    val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>${if (isArsonist) "BURN THE FACTORIES" else "PROTECT THE FACTORIES"}")
+                    val title =
+                        miniMessage.deserialize("<bold><gradient:$colors:${-phase}>${if (isArsonist) "BURN THE FACTORIES" else "PROTECT THE FACTORIES"}")
                     list += getSpacer()
                     list += title
                     list += timerText
@@ -517,7 +515,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         eventNode.addListener(PlayerTickEvent::class.java) { event ->
             val player = event.player
             if (playerOnFire(player)) {
-                player.fireTicks = 200
+                player.fireTicks = ServerFlag.SERVER_TICKS_PER_SECOND * 3
             }
 
             if (player.isOnFire) {
@@ -542,8 +540,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
      * Returns whether an arsonist has "escaped" the nuclear fallout.
      * TODO: make configurable
      */
-    fun hasEscaped(it: Player) = (it.position.x > -120 && it.position.blockZ() in (0 .. 105)) ||
-            (it.position.x > -140 && it.position.blockZ() in (-40 .. 0))
+    fun hasEscaped(it: Player) = (it.position.x > -120 && it.position.blockZ() in (0..105)) ||
+            (it.position.x > -140 && it.position.blockZ() in (-40..0))
 
     fun explodeRegion(configKey: String, index: Int) {
         val stepsPerCurve = 7
@@ -634,15 +632,28 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         sendGroupedPacket(ChunkBiomesPacket(packetData))
     }
 
-    private fun playerOnFire(player: Player) : Boolean {
-        val instance = player.instance;
-        val playerPosition = player.position;
-        val targetBlock = instance.getBlock(playerPosition);
+    private fun playerOnFire(player: Player): Boolean {
+        val instance = player.instance
+        val playerPosition = player.position
+        val targetBlock = instance.getBlock(playerPosition)
         return Block.FIRE.compare(targetBlock)
     }
 
 
     private companion object {
+        val FLINT_AND_STEEL = FireStartingItem(
+            "flint_and_steel", ItemStack.builder(Material.FLINT_AND_STEEL)
+                .set(DataComponents.MAX_DAMAGE, 64)
+                .build()
+        )
+        val MATCHES = FireStartingItem(
+            "matches",
+            ItemStack.builder(Material.TORCH)
+                .set(DataComponents.CUSTOM_NAME, Component.text("Matches", NamedTextColor.RED))
+                .set(DataComponents.MAX_DAMAGE, 30)
+                .set(DataComponents.MAX_STACK_SIZE, 1)
+                .build()
+        )
         val FLAMETHROWER = SprayItem(
             "flamethrower",
             ItemStack.builder(Material.BLAZE_ROD)

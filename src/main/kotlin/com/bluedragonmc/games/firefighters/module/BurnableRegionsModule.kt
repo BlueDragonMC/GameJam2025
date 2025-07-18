@@ -40,7 +40,7 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
         var currentFlammableBlocks: Int = 0
 
         fun countFlammableBlocks(instance: Instance) =
-            (start .. end).count { pos ->
+            (start..end).count { pos ->
                 FlammableBlocks.canBurn(instance.getBlock(pos, Block.Getter.Condition.TYPE)!!)
             }
 
@@ -59,8 +59,13 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
                                     if (currentBlock.compare(Block.FIRE) || currentBlock.isAir) {
                                         remove()
                                     }
+                                    if (getProportionBurned() > 0.9) {
+                                        remove()
+                                    }
                                 }
-                                updateViewableRule { player -> parent.getModule<TeamModule>().getTeam(player) == parent.arsonistsTeam }
+                                updateViewableRule { player ->
+                                    parent.getModule<TeamModule>().getTeam(player) == parent.arsonistsTeam
+                                }
                                 setNoGravity(true)
                                 isGlowing = true
                                 isInvisible = true
@@ -119,7 +124,8 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
             region.name
                 .append(Component.text(": ", NamedTextColor.GRAY))
                 .append(
-                    Component.text("${(percent * 100).roundToInt()}%").withTransition(
+                    if (percent > 0.9) Component.text("\uD83D\uDCA3 GONE", NamedTextColor.DARK_RED)
+                    else Component.text("${(percent * 100).roundToInt()}%").withTransition(
                         percent.toFloat(),
                         // Start with green at 0% and smoothly transition to dark red at 100%
                         NamedTextColor.GREEN,
@@ -128,8 +134,8 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
                         NamedTextColor.RED,
                         NamedTextColor.DARK_RED
                     ).decoration(TextDecoration.BOLD, percent > 0.75)
+                        .append(Component.text(" burned", NamedTextColor.GRAY))
                 )
-                .append(Component.text(" burned", NamedTextColor.GRAY))
         }
     }
 
