@@ -44,7 +44,7 @@ burnableRegionsStage2:
       - -120, -30, -44, -130, 20
 powerup:
   locations:
-    - 37.5, -45, 43 # in weapon storage
+    - 37.5, -43, 43 # in weapon storage
     - -33.5, -52, 90 # in south fire station
     - -96, -52, -15 # outside, west
     - -80, -52, -43 # outside, northwest

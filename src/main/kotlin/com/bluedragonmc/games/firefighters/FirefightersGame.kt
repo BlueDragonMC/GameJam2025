@@ -353,7 +353,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     val regions = getModule<BurnableRegionsModule>()
                     val phase = (getInstance().worldAge % 20L) / 20.0
                     val colors = "#a10000:#ea2300:#ff8100:#f25500:#d80000"
-                    val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>BURN THE FACTORY")
+                    val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>BURN THE FACTORIES")
                     list += getSpacer()
                     list += title
                     list += regions.getScoreboardText()
