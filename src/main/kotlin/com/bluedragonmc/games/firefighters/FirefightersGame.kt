@@ -497,14 +497,16 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             "flamethrower",
             ItemStack.builder(Material.BLAZE_ROD)
                 .customName(Component.translatable("item.flamethrower", NamedTextColor.DARK_RED).noItalic())
-                .set(DataComponents.MAX_DAMAGE, 64).build(),
+                .set(DataComponents.MAX_DAMAGE, 64)
+                .set(DataComponents.MAX_STACK_SIZE, 1).build(),
             SprayItem.SprayItemType.FIRE_SPREAD
         )
         val EXTINGUISHER = SprayItem(
             "extinguisher",
             ItemStack.builder(Material.GLOW_INK_SAC)
                 .customName(Component.translatable("item.extinguisher", NamedTextColor.DARK_AQUA).noItalic())
-                .set(DataComponents.MAX_DAMAGE, 64).build(),
+                .set(DataComponents.MAX_DAMAGE, 64)
+                .set(DataComponents.MAX_STACK_SIZE, 1).build(),
             SprayItem.SprayItemType.FIRE_EXTINGUISH
         )
 
