@@ -209,7 +209,13 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
                     e.aiGroups.add(
                         EntityAIGroupBuilder()
-                            .addTargetSelector(ClosestEntityTarget(e, 25.0) { it is Player })
+                            .addTargetSelector(
+                                ClosestEntityTarget(
+                                    e,
+                                    25.0
+                                ) {
+                                    it is Player && parent.getModule<TeamModule>().getTeam(it) == parent.arsonistsTeam
+                                })
                             .addGoalSelector(FollowTargetGoal(e, Duration.ofSeconds(1)))
                             .addGoalSelector(MeleeAttackGoal(e, 3.0, Duration.ofSeconds(1)))
                             .build()
@@ -417,7 +423,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 binding.update()
             }
             if (timeLeft > 0) {
-                timeLeft --
+                timeLeft--
             } else if (timeLeft == 0) {
                 timeLeft = -1
                 getModule<WinModule>().declareWinner(firefightersTeam)
