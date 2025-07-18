@@ -44,13 +44,15 @@ class SprayItem(override val itemId: String, item: ItemStack, private val sprayI
         val damage = player.itemInMainHand.get(DataComponents.DAMAGE, 0)
 
         if (damage > item.get(DataComponents.MAX_DAMAGE, Integer.MAX_VALUE)) {
+            player.itemInMainHand = ItemStack.AIR
+            player.playSound(Sound.sound(SoundEvent.ENTITY_ITEM_BREAK, Sound.Source.PLAYER, 1.0f, 1.0f))
             return
+        } else {
+            player.itemInMainHand = player.itemInMainHand.with(
+                DataComponents.DAMAGE,
+                damage + SPRAYS_PER_ACTION
+            )
         }
-
-        player.itemInMainHand = player.itemInMainHand.with(
-            DataComponents.DAMAGE,
-            damage + SPRAYS_PER_ACTION
-        )
 
         repeat(SPRAYS_PER_ACTION) { i ->
             MinecraftServer.getSchedulerManager().buildTask {
