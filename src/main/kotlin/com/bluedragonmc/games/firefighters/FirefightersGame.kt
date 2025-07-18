@@ -37,6 +37,7 @@ import net.minestom.server.event.EventListener
 import net.minestom.server.event.entity.EntityAttackEvent
 import net.minestom.server.event.instance.InstanceTickEvent
 import net.minestom.server.event.player.PlayerBlockInteractEvent
+import net.minestom.server.event.player.PlayerDeathEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.palette.Palette
 import net.minestom.server.item.ItemStack
@@ -225,6 +226,18 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                         task!!.cancel()
                     }
                 }.repeat(Duration.of(1, TimeUnit.SERVER_TICK)).schedule()
+                parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler { event ->
+                    val aliveArsonists = parent.arsonistsTeam.players.filter { player -> !parent.getModule<SpectatorModule>().isSpectating(player) }
+                    if (aliveArsonists.isEmpty()) {
+                        // The zombies or firefighters have killed all the arsonists. They win!
+                        parent.currentStage = parent.currentStage.advance(parent)
+                        parent.getModule<WinModule>().declareWinner(parent.firefightersTeam)
+                    } else if (aliveArsonists.all { parent.hasEscaped(it) }) {
+                        // All arsonists have escaped. They win!
+                        parent.currentStage = parent.currentStage.advance(parent)
+                        parent.getModule<WinModule>().declareWinner(parent.arsonistsTeam)
+                    }
+                }.expireWhen { parent.currentStage !is Stage3 }.build())
 
                 return Stage3()
             }
@@ -266,7 +279,17 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         use(SidebarModule(name))
         use(SpawnpointModule(SpawnpointModule.ConfigSpawnpointProvider()))
         use(SpectatorModule(spectateOnDeath = false, spectateOnLeave = true))
-        use(TimedRespawnModule(seconds = 5))
+        use(TimedRespawnModule(seconds = 5), { event ->
+            if (event is PlayerDeathEvent) {
+                // During stage 3, only firefighters can respawn
+                if (currentStage is Stage.Stage3 && getModule<TeamModule>().getTeam(event.player) == arsonistsTeam) {
+                    getModule<SpectatorModule>().addSpectator(event.player)
+                    return@use false
+                }
+                return@use true
+            }
+            return@use true
+        })
         use(VoidDeathModule(threshold = -60.0))
         use(VoteStartModule(minPlayers = 1))
 //        use(VoteStartModule(minPlayers = 1, countdownSeconds = 5))
@@ -381,12 +404,14 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             val timerText = Component.text("Police arrive in: ", NamedTextColor.GRAY)
                 .append(Component.text("$minutes:${seconds.toString().padStart(2, '0')}", NamedTextColor.RED))
 
+            val isArsonist = getModule<TeamModule>().getTeam(player) == arsonistsTeam
+
             when (currentStage) {
                 is Stage.Stage1 -> {
                     val regions = getModule<BurnableRegionsModule>()
                     val phase = (getInstance().worldAge % 20L) / 20.0
                     val colors = "#a10000:#ea2300:#ff8100:#f25500:#d80000"
-                    val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>BURN THE FACTORIES")
+                    val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>${if (isArsonist) "BURN THE FACTORIES" else "PROTECT THE FACTORIES"}")
                     list += getSpacer()
                     list += title
                     list += timerText
@@ -408,6 +433,26 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     list += getSpacer()
                 }
 
+                is Stage.Stage3 -> {
+                    val aliveArsonists = arsonistsTeam.players
+                        .filter { !getModule<SpectatorModule>().isSpectating(it) }
+                    val escapedArsonists = aliveArsonists.count { hasEscaped(it) }
+                    val phase = (getInstance().worldAge % 20L) / 20.0
+                    val colors = "#e5acf9:#bb24f2:#f224da"
+                    list += miniMessage.deserialize("<bold><gradient:$colors:${-phase}>${if (isArsonist) "ESCAPE THE PLANT" else "CAPTURE THE ARSONISTS"}")
+                    if (isArsonist) {
+                        list += Component.text("Go to the village", NamedTextColor.GRAY)
+                        list += Component.text("to the west!", NamedTextColor.GRAY)
+                    } else {
+                        list += Component.text("Don't let them get to", NamedTextColor.GRAY)
+                        list += Component.text("the village to the west!", NamedTextColor.GRAY)
+                    }
+                    list += getSpacer()
+                    list += Component.text("Arsonists escaped: ", NamedTextColor.GRAY)
+                        .append(Component.text(escapedArsonists, NamedTextColor.RED))
+                        .append(Component.text("/${aliveArsonists}", NamedTextColor.GRAY))
+                }
+
                 else -> {}
             }
             return@bind list
@@ -422,11 +467,13 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 // Update scoreboard ~10x per second for the "Burn status" title animation
                 binding.update()
             }
-            if (timeLeft > 0) {
-                timeLeft--
-            } else if (timeLeft == 0) {
-                timeLeft = -1
-                getModule<WinModule>().declareWinner(firefightersTeam)
+            if (currentStage is Stage.Stage1 || currentStage is Stage.Stage2) {
+                if (timeLeft > 0) {
+                    timeLeft--
+                } else if (timeLeft == 0) {
+                    timeLeft = -1
+                    getModule<WinModule>().declareWinner(firefightersTeam)
+                }
             }
         }
 
@@ -440,6 +487,13 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             }
         }
     }
+
+    /**
+     * Returns whether an arsonist has "escaped" the nuclear fallout.
+     * TODO: make configurable
+     */
+    fun hasEscaped(it: Player) = (it.position.x > -120 && it.position.blockZ() in (0 .. 105)) ||
+            (it.position.x > -140 && it.position.blockZ() in (-40 .. 0))
 
     fun explodeRegion(configKey: String, index: Int) {
         val stepsPerCurve = 7
