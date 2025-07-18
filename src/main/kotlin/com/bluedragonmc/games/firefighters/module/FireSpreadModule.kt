@@ -114,7 +114,7 @@ class FireSpreadModule : GameModule() {
             /**
              * The base chance for a fire block to spread every tick, multiplied by the block's spread chance in [FlammableBlocks]
              */
-            private const val BASE_FIRE_SPREAD_CHANCE = 0.0001 // Chance that a fire block will spread every tick
+            private const val BASE_FIRE_SPREAD_CHANCE = 0.0005 // Chance that a fire block will spread every tick
 
             /**
              * The maximum amount of ticks that fire will attempt to spread before burning out
@@ -176,7 +176,7 @@ class FireSpreadModule : GameModule() {
             }
 
             // Try to spread this fire to other blocks
-            for (adjacentPos in iterateAdjacentBlocks(tick.blockPosition)) {
+            spread@ for (adjacentPos in iterateAdjacentBlocks(tick.blockPosition)) {
                 val block = tick.instance.getBlock(adjacentPos, Block.Getter.Condition.TYPE)
                 if (!block.isAir) continue
 
@@ -195,7 +195,7 @@ class FireSpreadModule : GameModule() {
                             // ^ We need to run this at the start of the next tick so that we're not mutating the tickable block handlers as they're being iterated over (see DynamicChunk#tick)
                             setFire(tick.instance, adjacentPos)
                         }
-                        break
+                        break@spread
                     }
                 }
             }
@@ -208,6 +208,7 @@ class FireSpreadModule : GameModule() {
                     MinecraftServer.getSchedulerManager().scheduleNextTick {
                         setFire(tick.instance, adjacentPos)
                     }
+                    break
                 }
             }
         }

@@ -1,5 +1,6 @@
 package com.bluedragonmc.games.firefighters
 
+import net.kyori.adventure.key.Key
 import net.minestom.server.instance.block.Block
 
 object FlammableBlocks {
@@ -7,16 +8,17 @@ object FlammableBlocks {
     /**
      * A map of block type to ( burn chance to spread chance ) derived from vanilla MC
      */
-    private val flammableBlocks: Map<Block,Pair<Int,Int>>
+    private val flammableBlocks: Map<Key,Pair<Int,Int>>
 
-    fun getBurnChance(block: Block) = flammableBlocks[block]?.first
-    fun getSpreadChance(block: Block) = flammableBlocks[block]?.second
-    fun isFlammable(block: Block) = flammableBlocks.containsKey(block)
+    fun getBurnChance(block: Block) = flammableBlocks[block.key()]?.first
+    fun getSpreadChance(block: Block) = flammableBlocks[block.key()]?.second
+    fun isFlammable(block: Block) = flammableBlocks.containsKey(block.key())
+    fun canBurn(block: Block) = (getBurnChance(block) ?: 0) > 0
 
     init {
         var map = mutableMapOf<Block,Pair<Int,Int>>()
         // Vanilla Minecraft blocks
-        map[Block.OAK_PLANKS] = 0 to 20 // first number was 5, we set it to 0
+        map[Block.OAK_PLANKS] = 0 to 5 // originally was 5 to 20
         map[Block.SPRUCE_PLANKS] = 5 to 20
         map[Block.BIRCH_PLANKS] = 5 to 20
         map[Block.JUNGLE_PLANKS] = 5 to 20
@@ -214,6 +216,7 @@ object FlammableBlocks {
         map[Block.BUSH] = 60 to 100
         // Custom additions
         map[Block.SLIME_BLOCK] = 40 to 100
-        flammableBlocks = map.toMap()
+
+        flammableBlocks = map.mapKeys { (entry) -> entry.key() }.toMap()
     }
 }

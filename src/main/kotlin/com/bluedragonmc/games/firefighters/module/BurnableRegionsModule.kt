@@ -33,7 +33,7 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
 
         fun countFlammableBlocks(instance: Instance) =
             (start .. end).count { pos ->
-                FlammableBlocks.isFlammable(instance.getBlock(pos, Block.Getter.Condition.TYPE)!!)
+                FlammableBlocks.canBurn(instance.getBlock(pos, Block.Getter.Condition.TYPE)!!)
             }
 
         // Called every second
