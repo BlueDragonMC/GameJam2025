@@ -160,6 +160,12 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             override fun advance(parent: FirefightersGame): Stage {
                 parent.getModule<BurnableRegionsModule>().loadFrom(parent, "burnableRegionsStage2")
                 // Stage 1 -> Stage 2
+
+                // Open the iron door to the reactor (lol)
+                parent.getInstance().setBlock(-11,-52,-30, parent.getInstance().getBlock(-11,-52,-30).withProperty("open", "true"))
+                parent.getInstance().setBlock(-11,-51,-30, parent.getInstance().getBlock(-11,-51,-30).withProperty("open", "true"))
+
+                // Observe burned blocks
                 val almostBurnedRegions =
                     mutableListOf<BurnableRegionsModule.Region>() // used for the "almost there" chat message
                 val burnedRegions = mutableListOf<BurnableRegionsModule.Region>()
