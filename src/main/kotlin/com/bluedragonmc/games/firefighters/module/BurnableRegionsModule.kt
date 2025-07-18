@@ -4,6 +4,7 @@ import com.bluedragonmc.games.firefighters.FirefightersGame
 import com.bluedragonmc.games.firefighters.FlammableBlocks
 import com.bluedragonmc.games.firefighters.rangeTo
 import com.bluedragonmc.server.Game
+import com.bluedragonmc.server.module.DependsOn
 import com.bluedragonmc.server.module.GameModule
 import com.bluedragonmc.server.module.config.ConfigModule
 import com.bluedragonmc.server.module.minigame.TeamModule
@@ -24,6 +25,7 @@ import net.minestom.server.instance.Instance
 import net.minestom.server.instance.block.Block
 import kotlin.math.roundToInt
 
+@DependsOn(TeamModule::class)
 class BurnableRegionsModule(private val configKey: String) : GameModule() {
 
     private var regions: List<Region> = listOf()

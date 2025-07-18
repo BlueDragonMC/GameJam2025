@@ -12,6 +12,7 @@ import net.minestom.server.event.player.PlayerTickEvent
 class InventoryMovementSpeedModule(val baseSpeed: Double, val slowdownPerItem: Double, val minimumSpeed: Double) : GameModule() {
     private lateinit var parent: Game
     override fun initialize(parent: Game, eventNode: EventNode<Event>) {
+        this.parent = parent
         val instance = parent.getInstance()
         eventNode.addListener(PlayerTickEvent::class.java) { event ->
             if (instance.worldAge % 60 != 0L) return@addListener
