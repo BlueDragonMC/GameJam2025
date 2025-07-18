@@ -1,18 +1,24 @@
 package com.bluedragonmc.games.firefighters.module
 
+import com.bluedragonmc.games.firefighters.FirefightersGame
 import com.bluedragonmc.games.firefighters.FlammableBlocks
 import com.bluedragonmc.games.firefighters.rangeTo
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.module.GameModule
 import com.bluedragonmc.server.module.config.ConfigModule
+import com.bluedragonmc.server.module.minigame.TeamModule
+import com.bluedragonmc.server.utils.packet.GlowingEntityUtils
 import com.bluedragonmc.server.utils.withTransition
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.coordinate.Pos
+import net.minestom.server.entity.Entity
+import net.minestom.server.entity.EntityType
 import net.minestom.server.event.Event
 import net.minestom.server.event.EventNode
+import net.minestom.server.event.entity.EntityTickEvent
 import net.minestom.server.event.instance.InstanceTickEvent
 import net.minestom.server.instance.Instance
 import net.minestom.server.instance.block.Block
@@ -37,12 +43,30 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
             }
 
         // Called every second
-        fun update(instance: Instance) {
+        fun update(instance: Instance, parent: FirefightersGame) {
             try {
                 val blocks = countFlammableBlocks(instance)
 
                 if (totalFlammableBlocks == null) {
                     totalFlammableBlocks = blocks
+                    for (block in (start..end)) {
+                        if (FlammableBlocks.canBurn(instance.getBlock(block, Block.Getter.Condition.TYPE))) {
+                            Entity(EntityType.SHULKER).apply {
+                                eventNode().addListener(EntityTickEvent::class.java) {
+                                    val currentBlock = instance.getBlock(block, Block.Getter.Condition.TYPE)
+                                    if (currentBlock.compare(Block.FIRE) || currentBlock.isAir) {
+                                        remove()
+                                    }
+                                }
+                                updateViewableRule { player -> parent.getModule<TeamModule>().getTeam(player) == parent.arsonistsTeam }
+                                setNoGravity(true)
+                                isGlowing = true
+                                isInvisible = true
+                                setInstance(instance, block)
+                                GlowingEntityUtils.glow(this, NamedTextColor.RED, instance.players)
+                            }
+                        }
+                    }
                 }
                 currentFlammableBlocks = blocks
             } catch (e: NullPointerException) {
@@ -82,7 +106,7 @@ class BurnableRegionsModule(private val configKey: String) : GameModule() {
         eventNode.addListener(InstanceTickEvent::class.java) { event ->
             if (event.instance.worldAge % 20L == 0L) {
                 // Every second, update every region's flammable block count
-                regions.forEach { region -> region.update(event.instance) }
+                regions.forEach { region -> region.update(event.instance, parent as FirefightersGame) }
             }
         }
     }

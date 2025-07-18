@@ -15,7 +15,7 @@ burnableRegionsStage1:
       - 8.5, -34, 43, -90, 30
       - 8.5, -34, 43, -90, 30
   - name: <yellow><lang:firefighters.factory_2> # Fuel Storage
-    start: -90, -52, 36
+    start: -90, -52, 40
     end: -66, -37, 14
     cutscene:
       - -83, -48, 33, -170, 30
