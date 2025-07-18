@@ -65,6 +65,7 @@ fun main() {
     )
 
     MinecraftServer.getGlobalEventHandler().let { eventHandler ->
+        GlobalBlockHandlers.hook()
         GlobalChatFormat.hook(eventHandler)
         eventHandler.addListener(AsyncPlayerConfigurationEvent::class.java) { event ->
             event.spawningInstance = spawningInstance
