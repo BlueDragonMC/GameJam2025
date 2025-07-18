@@ -372,11 +372,11 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 val firefighterCutscene = introCutsceneNode.node("firefighter").getList(Pos::class.java)
                 if (firefighterCutscene != null)
                     firefightersTeam.players.forEach { player ->
-                        cutsceneModule.playCutscene(player, this, firefighterCutscene, stepsPerCurve = 10)
+                        cutsceneModule.playCutscene(player, this, firefighterCutscene, stepsPerCurve = 10, msPerPoint = 100)
                     }
                 if (arsonistCutscene != null)
                     arsonistsTeam.players.forEach { player ->
-                        cutsceneModule.playCutscene(player, this, arsonistCutscene, stepsPerCurve = 10)
+                        cutsceneModule.playCutscene(player, this, arsonistCutscene, stepsPerCurve = 10, msPerPoint = 100)
                     }
             }
         }
@@ -392,6 +392,9 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             getModule<ConfigModule>().getConfig().node("powerup", "locations").getList(Pos::class.java) ?: listOf()
 
         use(PowerupModule(powerups, powerupSpawnPositions, spawnRate = Duration.ofSeconds(1), spawnAllOnStart = true))
+
+        // defualt movement speed is 0.1
+        use(InventoryMovementSpeedModule(baseSpeed = 0.13, slowdownPerItem = 0.01, minimumSpeed = 0.08))
 
         use(FireSpreadModule(), { System.currentTimeMillis() > explodingUntil })
 
