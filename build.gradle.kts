@@ -38,4 +38,12 @@ tasks.shadowJar {
     mergeServiceFiles()
 }
 
-tasks["build"].dependsOn(tasks["shadowJar"])
+tasks.build {
+    dependsOn(tasks["shadowJar"])
+}
+
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "com.bluedragonmc.example.server.MainKt"
+    }
+}
