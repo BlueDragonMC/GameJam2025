@@ -16,7 +16,7 @@ object FlammableBlocks {
     init {
         var map = mutableMapOf<Block,Pair<Int,Int>>()
         // Vanilla Minecraft blocks
-        map[Block.OAK_PLANKS] = 5 to 20
+        map[Block.OAK_PLANKS] = 0 to 20 // first number was 5, we set it to 0
         map[Block.SPRUCE_PLANKS] = 5 to 20
         map[Block.BIRCH_PLANKS] = 5 to 20
         map[Block.JUNGLE_PLANKS] = 5 to 20

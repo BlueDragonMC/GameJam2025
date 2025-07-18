@@ -5,61 +5,54 @@ world:
   spawnpoints:
     - 11, -52, 27, 90, 0
 burnableRegionsStage1:
-  - name: <yellow><lang:firefighters.factory_1>
-    start: 40, -22, 40
-    end: 9, -53, 13
+  - name: <yellow><lang:firefighters.factory_1> # Weapon Storage
+    start: 23, -53, 55
+    end: 51, -31, 30
     cutscene:
-      - 10.5, -50, 27, -90, 0
-      - -2.5, -49, 27, -90, 0
-      - 0, -30, 52, -135, 30
-      - 0, -30, 52, -135, 30
-      - 0, -30, 52, -135, 30
-  - name: <yellow><lang:firefighters.factory_2>
+      - 33.5, -50, 43, -90, 0
+      - 21, -48, 43, -90, 0
+      - 8.5, -34, 43, -90, 30
+      - 8.5, -34, 43, -90, 30
+      - 8.5, -34, 43, -90, 30
+  - name: <yellow><lang:firefighters.factory_2> # Fuel Storage
     start: -90, -52, 36
     end: -66, -37, 14
     cutscene:
-      - -83, -50, 18.5, 0, 0
-      - -83, -50, 6.5, 0, 0
-      - -63.5, -34.5, 2.5, 45, 30
-      - -63.5, -34.5, 2.5, 45, 30
-      - -63.5, -34.5, 2.5, 45, 30
-      - -63.5, -34.5, 2.5, 45, 30
-  - name: <yellow><lang:firefighters.factory_3>
-    start: -56, -52, -80
-    end: -34, -41, -58
+      - -83, -48, 33, -170, 30
+      - -84, -45, 51, -180, 20
+      - -95, -38, 51, -150, 30
+      - -95, -38, 51, -150, 30
+      - -95, -38, 51, -150, 30
+  - name: <yellow><lang:firefighters.factory_3> # Food Storage
+    start: -69, -53, -59
+    end: -103, -33, -73
     cutscene:
       - -15, -50, -70, 90, 0
       - -23, -38, -93, 45, 30
       - -45, -35, -95, 0, 30
       - -45, -35, -95, 0, 30
       - -45, -35, -95, 0, 30
-  - name: <yellow><lang:firefighters.factory_4>
-    start: 11, -52, -79
-    end: 33, -41, -57
-    cutscene:
-      - -1.5, -50, -62.5, 0, 0
-      - -5, -39, -72, -80, 20
-      - 1.5, -32, -90, -40, 30
-      - 23, -32, -91, 0, 35
-      - 23, -32, -91, 0, 35
 burnableRegionsStage2:
   - name: <#acfc8d><lang:firefighters.reactor_core>
     start: -7, -32, -33
     end: 4, -20, -45
     cutscene:
-      - -1.5, -40, -39.5, 0, -90
-      - -1.5, -45, -39.5, 0, -90
-      - -1.5, -50, -39.5, 0, -90
-      - -1.5, -50, -39.5, 0, -90
-      - -1.5, -50, -39.5, 0, -90
+      - -98, -41, -65.5, -90, 20
+      - -114, -38 -65.5, -90, 15
+      - -120, -30, -44, -130, 20
+      - -120, -30, -44, -130, 20
+      - -120, -30, -44, -130, 20
 powerup:
   locations:
-    - 13, -52, 27, 0, 0
-    - 15, -52, 27, 0, 0
-    - 17, -52, 27, 0, 0
-    - 19, -52, 27, 0, 0
-    - 21, -52, 27, 0, 0
-    - 23, -52, 27, 0, 0
-    - 25, -52, 27, 0, 0
-    - 27, -52, 27, 0, 0
-    - 29, -52, 27, 0, 0
+    - 37.5, -45, 43 # in weapon storage
+    - -33.5, -52, 90 # in south fire station
+    - -96, -52, -15 # outside, west
+    - -80, -52, -43 # outside, northwest
+    - -23, -52, -62 # outside, north
+    - -3, -52, -111 # in north fire station
+    - 85, -52, -10 # in east fire station
+    - 31, -52, -6 # outside, east
+    - -10, -50, 29 # outside, south
+    - -45, -52, -34 # admin building, bottom
+    - -36, -47, -32 # admin building, top
+    - -48.5, -52, -3.5 # turbine building

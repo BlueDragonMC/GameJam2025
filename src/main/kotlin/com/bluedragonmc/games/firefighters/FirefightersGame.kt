@@ -387,19 +387,22 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             }
         }
 
-        onGameStart {
-            MinecraftServer.getSchedulerManager().scheduleNextTick {
-                if (currentStage is Stage.BeforeGameStart) { // sanity check, should always be true
-                    currentStage = currentStage.advance(this)
-                } else {
-                    currentStage = Stage.Stage1()
-                }
-            }
-        }
+//        onGameStart {
+//            MinecraftServer.getSchedulerManager().scheduleNextTick {
+//                if (currentStage is Stage.BeforeGameStart) { // sanity check, should always be true
+//                    currentStage = currentStage.advance(this)
+//                } else {
+//                    currentStage = Stage.Stage1()
+//                }
+//            }
+//        }
 
         handleEvent<PlayerJoinGameEvent> {
             EventDispatcher.call(GameStartEvent(this))
             state = GameState.INGAME
+            MinecraftServer.getSchedulerManager().scheduleNextTick {
+                it.player.gameMode = GameMode.CREATIVE
+            }
         }
     }
 
