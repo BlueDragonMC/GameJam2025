@@ -39,8 +39,8 @@ class FireSpreadModule : GameModule() {
 
     companion object {
 
-        fun getProperties(instance: Instance, pos: Point): Map<String,String>{
-            val properties = mutableMapOf<String,String>()
+        fun getProperties(instance: Instance, pos: Point): Map<String, String> {
+            val properties = mutableMapOf<String, String>()
             for (direction in Direction.entries) {
                 if (instance.getBlock(pos.add(direction)).registry().collisionShape()
                         .isFaceFull(BlockFace.fromDirection(direction.opposite()))
@@ -55,7 +55,8 @@ class FireSpreadModule : GameModule() {
         fun setFire(instance: Instance, pos: Point): Boolean {
             val properties = getProperties(instance, pos)
 
-            val hasSupportBelow = instance.getBlock(pos.add(0.0, -1.0, 0.0)).registry().collisionShape().isFaceFull(BlockFace.TOP)
+            val hasSupportBelow =
+                instance.getBlock(pos.add(0.0, -1.0, 0.0)).registry().collisionShape().isFaceFull(BlockFace.TOP)
             if (!hasSupportBelow && properties.isEmpty()) {
                 instance.setBlock(pos, Block.AIR)
                 return false
@@ -113,7 +114,7 @@ class FireSpreadModule : GameModule() {
             /**
              * The base chance for a fire block to spread every tick, multiplied by the block's spread chance in [FlammableBlocks]
              */
-            private const val BASE_FIRE_SPREAD_CHANCE = 0.0005 // Chance that a fire block will spread every tick
+            private const val BASE_FIRE_SPREAD_CHANCE = 0.0001 // Chance that a fire block will spread every tick
 
             /**
              * The maximum amount of ticks that fire will attempt to spread before burning out
@@ -142,7 +143,9 @@ class FireSpreadModule : GameModule() {
                 return
             }
 
-            val hasSupportBelow = tick.instance.getBlock(tick.blockPosition.add(0.0, -1.0, 0.0)).registry().collisionShape().isFaceFull(BlockFace.TOP)
+            val hasSupportBelow =
+                tick.instance.getBlock(tick.blockPosition.add(0.0, -1.0, 0.0)).registry().collisionShape()
+                    .isFaceFull(BlockFace.TOP)
 
             if (!hasSupportBelow || aliveTicks >= FIRE_SPREAD_MAX_TIME / 3) {
                 // If this fire block doesn't have any adjacent flammable blocks, remove it
@@ -173,23 +176,21 @@ class FireSpreadModule : GameModule() {
             }
 
             // Try to spread this fire to other blocks
-            spread@{
-                val chance = FlammableBlocks.getSpreadChance(tick.block) ?: return@spread
+            for (adjacentPos in iterateAdjacentBlocks(tick.blockPosition)) {
+                val block = tick.instance.getBlock(adjacentPos, Block.Getter.Condition.TYPE)
+                if (!block.isAir) continue
 
-                if (Random.nextDouble() > BASE_FIRE_SPREAD_CHANCE * chance) {
-                    return@spread
-                }
-
-                for (adjacentPos in iterateAdjacentBlocks(tick.blockPosition)) {
-                    if (tick.instance.getBlock(adjacentPos, Block.Getter.Condition.TYPE).isAir &&
-                        hasFullAdjacentFace(tick.instance, adjacentPos) &&
-                        FlammableBlocks.isFlammable(
-                            tick.instance.getBlock(
-                                tick.blockPosition,
-                                Block.Getter.Condition.TYPE
-                            )
-                        )
+                for (direction in Direction.entries) {
+                    val supportingPos = adjacentPos.add(direction)
+                    val supportingBlock = tick.instance.getBlock(supportingPos, Block.Getter.Condition.TYPE)
+                    if (supportingBlock.registry()
+                            .collisionShape()
+                            .isFaceFull(BlockFace.fromDirection(direction.opposite()))
                     ) {
+                        val chance = FlammableBlocks.getSpreadChance(supportingBlock) ?: continue
+                        if (Random.nextDouble() > BASE_FIRE_SPREAD_CHANCE * chance) {
+                            continue
+                        }
                         MinecraftServer.getSchedulerManager().scheduleNextTick {
                             // ^ We need to run this at the start of the next tick so that we're not mutating the tickable block handlers as they're being iterated over (see DynamicChunk#tick)
                             setFire(tick.instance, adjacentPos)

@@ -319,7 +319,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         handleEvent<PlayerBlockInteractEvent> { event ->
             if (event.isBlockingItemUse) return@handleEvent
-            if ((event.player.getItemInHand(event.hand).material() == Material.FLINT_AND_STEEL) or (event.player.getItemInHand(event.hand).material() == Material.TORCH)) {
+            if ((event.player.getItemInHand(event.hand).material() == Material.FLINT_AND_STEEL) || (event.player.getItemInHand(event.hand).material() == Material.TORCH)) {
                 val direction = event.blockFace.toDirection()
                 val blockPos = event.blockPosition.add(direction)
                 if (event.instance.getBlock(
