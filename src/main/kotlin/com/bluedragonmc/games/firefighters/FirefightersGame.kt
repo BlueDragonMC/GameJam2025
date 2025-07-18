@@ -16,6 +16,7 @@ import com.bluedragonmc.server.module.vanilla.*
 import com.bluedragonmc.server.utils.*
 import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import net.kyori.adventure.key.Key
+import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
@@ -32,12 +33,15 @@ import net.minestom.server.entity.ai.goal.FollowTargetGoal
 import net.minestom.server.entity.ai.goal.MeleeAttackGoal
 import net.minestom.server.entity.ai.target.ClosestEntityTarget
 import net.minestom.server.entity.attribute.Attribute
+import net.minestom.server.entity.damage.Damage
+import net.minestom.server.entity.damage.DamageType
 import net.minestom.server.entity.metadata.display.BlockDisplayMeta
 import net.minestom.server.event.EventListener
 import net.minestom.server.event.entity.EntityAttackEvent
 import net.minestom.server.event.instance.InstanceTickEvent
 import net.minestom.server.event.player.PlayerBlockInteractEvent
 import net.minestom.server.event.player.PlayerDeathEvent
+import net.minestom.server.event.player.PlayerTickEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.palette.Palette
 import net.minestom.server.item.ItemStack
@@ -298,7 +302,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         handleEvent<PlayerJoinGameEvent> {
             MinecraftServer.getSchedulerManager().scheduleNextTick {
-                it.player.gameMode = GameMode.CREATIVE
+                it.player.gameMode = GameMode.SURVIVAL
                 it.player.isAllowFlying = true
                 it.player.isFlying = true
             }
@@ -480,6 +484,15 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             }
         }
 
+        eventNode.addListener(PlayerTickEvent::class.java) { event ->
+            val player = event.player;
+            if (playerOnFire(player)) {
+                player.fireTicks = 20;
+            }
+
+            // TODO figure out how to apply damage to the player without instantly killing them.
+        }
+
         onGameStart {
             MinecraftServer.getSchedulerManager().scheduleNextTick {
                 if (currentStage is Stage.BeforeGameStart) { // sanity check, should always be true
@@ -586,6 +599,14 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         sendGroupedPacket(ChunkBiomesPacket(packetData))
     }
+
+    private fun playerOnFire(player: Player) : Boolean {
+        val instance = player.instance;
+        val playerPosition = player.position;
+        val targetBlock = instance.getBlock(playerPosition);
+        return Block.FIRE.compare(targetBlock)
+    }
+
 
     private companion object {
         val FLAMETHROWER = SprayItem(
