@@ -335,8 +335,6 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         handleEvent<PlayerJoinGameEvent> {
             MinecraftServer.getSchedulerManager().scheduleNextTick {
                 it.player.gameMode = GameMode.SURVIVAL
-                it.player.isAllowFlying = true
-                it.player.isFlying = true
             }
         }
 
@@ -517,9 +515,9 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         }
 
         eventNode.addListener(PlayerTickEvent::class.java) { event ->
-            val player = event.player;
+            val player = event.player
             if (playerOnFire(player)) {
-                player.fireTicks += 200;
+                player.fireTicks = 200
             }
 
             if (player.isOnFire) {
