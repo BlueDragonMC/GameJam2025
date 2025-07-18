@@ -3,6 +3,8 @@ package com.bluedragonmc.games.firefighters
 import com.bluedragonmc.games.firefighters.item.SprayItem
 import com.bluedragonmc.games.firefighters.module.*
 import com.bluedragonmc.server.Game
+import com.bluedragonmc.server.event.GameStartEvent
+import com.bluedragonmc.server.event.PlayerJoinGameEvent
 import com.bluedragonmc.server.module.combat.OldCombatModule
 import com.bluedragonmc.server.module.config.ConfigModule
 import com.bluedragonmc.server.module.gameplay.SidebarModule
@@ -121,7 +123,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     }
                     // Play explosion animation when a region reaches 100% burned
                     for ((i, region) in regions.getRegions().withIndex()) {
-                        if (region.getProportionBurned() == 1.0 && !burnedRegions.contains(region) && System.currentTimeMillis() > parent.explodingUntil) {
+                        if (region.getProportionBurned() >= 0.9 && !burnedRegions.contains(region) && System.currentTimeMillis() > parent.explodingUntil) {
                             burnedRegions.add(region)
                             parent.explodeRegion("burnableRegionsStage1", i)
 
@@ -161,7 +163,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     }
                     // Play explosion animation when a region reaches 100% burned
                     for ((i, region) in regions.getRegions().withIndex()) {
-                        if (region.getProportionBurned() == 1.0 && !burnedRegions.contains(region) && System.currentTimeMillis() > parent.explodingUntil) {
+                        if (region.getProportionBurned() >= 0.9 && !burnedRegions.contains(region) && System.currentTimeMillis() > parent.explodingUntil) {
                             burnedRegions.add(region)
                             parent.explodeRegion("burnableRegionsStage2", i)
                         }
@@ -261,6 +263,15 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 //        use(VoteStartModule(minPlayers = 1, countdownSeconds = 5))
         use(WinModule())
 
+
+        handleEvent<PlayerJoinGameEvent> {
+            MinecraftServer.getSchedulerManager().scheduleNextTick {
+                it.player.gameMode = GameMode.CREATIVE
+                it.player.isAllowFlying = true
+                it.player.isFlying = true
+            }
+        }
+
         use(TeamModule(allowFriendlyFire = false)) { teamModule ->
             teamModule.teams.add(firefightersTeam)
             teamModule.teams.add(arsonistsTeam)
@@ -319,7 +330,21 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             }
         }
 
-        use(CutsceneModule())
+        use(CutsceneModule()) { cutsceneModule ->
+            handleEvent<GameStartEvent> {
+                val introCutsceneNode = getModule<ConfigModule>().getConfig().node("introCutscene")
+                val arsonistCutscene = introCutsceneNode.node("arsonist").getList(Pos::class.java)
+                val firefighterCutscene = introCutsceneNode.node("firefighter").getList(Pos::class.java)
+                if (firefighterCutscene != null)
+                    firefightersTeam.players.forEach { player ->
+                        cutsceneModule.playCutscene(player, this, firefighterCutscene, stepsPerCurve = 10)
+                    }
+                if (arsonistCutscene != null)
+                    arsonistsTeam.players.forEach { player ->
+                        cutsceneModule.playCutscene(player, this, arsonistCutscene, stepsPerCurve = 10)
+                    }
+            }
+        }
 
         val powerups = listOf(
             FLAMETHROWER.item.asPowerup(arsonistsTeam, NamedTextColor.RED),
