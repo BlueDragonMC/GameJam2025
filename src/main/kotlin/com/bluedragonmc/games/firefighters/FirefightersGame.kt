@@ -21,6 +21,7 @@ import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.MinecraftServer
+import net.minestom.server.ServerFlag
 import net.minestom.server.component.DataComponents
 import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.coordinate.Pos
@@ -62,6 +63,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         TeamModule.Team(Component.translatable("firefighters.team.arsonists", TextColor.color(252, 121, 50)))
 
     var explodingUntil: Long = 0L // Used to pause fire spread during cutscenes
+    var timeLeft = -1 // Time left before police arrive (firefighters win), in ticks
 
     fun playerMessage(player: Player, msg: Component): Component {
         val team = getModule<TeamModule>().getTeam(player)
@@ -99,6 +101,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         class BeforeGameStart : Stage {
             override fun advance(parent: FirefightersGame): Stage {
                 // Starting Stage 1
+                parent.timeLeft = ServerFlag.SERVER_TICKS_PER_SECOND * 5 * 60
 
                 // Exposition chat messages
                 for (i in 1..3) {
@@ -199,7 +202,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 var spawns = 0
                 var task: Task? = null
                 task = MinecraftServer.getSchedulerManager().buildTask {
-                    val pos = BlockVec(Random.nextInt(-100 .. 100), -52, Random.nextInt(-100 .. 100))
+                    val pos = BlockVec(Random.nextInt(-100..100), -52, Random.nextInt(-100..100))
                     val e = EntityCreature(EntityType.ZOMBIE)
                     e.setInstance(parent.getInstance(), pos)
                     e.getAttribute(Attribute.MOVEMENT_SPEED).baseValue = 0.15
@@ -318,7 +321,10 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
 
         handleEvent<PlayerBlockInteractEvent> { event ->
             if (event.isBlockingItemUse) return@handleEvent
-            if ((event.player.getItemInHand(event.hand).material() == Material.FLINT_AND_STEEL) || (event.player.getItemInHand(event.hand).material() == Material.TORCH)) {
+            if ((event.player.getItemInHand(event.hand)
+                    .material() == Material.FLINT_AND_STEEL) || (event.player.getItemInHand(event.hand)
+                    .material() == Material.TORCH)
+            ) {
                 val direction = event.blockFace.toDirection()
                 val blockPos = event.blockPosition.add(direction)
                 if (event.instance.getBlock(
@@ -349,10 +355,12 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         val powerups = listOf(
             FLAMETHROWER.item.asPowerup(arsonistsTeam, NamedTextColor.RED),
             ItemStack.of(Material.FLINT_AND_STEEL).asPowerup(arsonistsTeam, NamedTextColor.RED),
-            ItemStack.of(Material.TORCH).with(DataComponents.CUSTOM_NAME, Component.text("Matches", NamedTextColor.RED)).asPowerup(arsonistsTeam, NamedTextColor.RED),
+            ItemStack.of(Material.TORCH).with(DataComponents.CUSTOM_NAME, Component.text("Matches", NamedTextColor.RED))
+                .asPowerup(arsonistsTeam, NamedTextColor.RED),
             EXTINGUISHER.item.asPowerup(firefightersTeam, NamedTextColor.AQUA)
         )
-        val powerupSpawnPositions = getModule<ConfigModule>().getConfig().node("powerup", "locations").getList(Pos::class.java) ?: listOf()
+        val powerupSpawnPositions =
+            getModule<ConfigModule>().getConfig().node("powerup", "locations").getList(Pos::class.java) ?: listOf()
 
         use(PowerupModule(powerups, powerupSpawnPositions, spawnRate = Duration.ofSeconds(1), spawnAllOnStart = true))
 
@@ -362,6 +370,11 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             if (state != GameState.INGAME) return@bind getStatusSection()
             val list = getStatusSection().toMutableList()
 
+            val minutes = timeLeft / ServerFlag.SERVER_TICKS_PER_SECOND / 60
+            val seconds = timeLeft / ServerFlag.SERVER_TICKS_PER_SECOND % 60
+            val timerText = Component.text("Police arrive in: ", NamedTextColor.GRAY)
+                .append(Component.text("$minutes:${seconds.toString().padStart(2, '0')}", NamedTextColor.RED))
+
             when (currentStage) {
                 is Stage.Stage1 -> {
                     val regions = getModule<BurnableRegionsModule>()
@@ -370,6 +383,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>BURN THE FACTORIES")
                     list += getSpacer()
                     list += title
+                    list += timerText
+                    list += getSpacer()
                     list += regions.getScoreboardText()
                     list += getSpacer()
                 }
@@ -381,6 +396,8 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     val title = miniMessage.deserialize("<bold><gradient:$colors:${-phase}>NUCLEAR PLANT")
                     list += getSpacer()
                     list += title
+                    list += timerText
+                    list += getSpacer()
                     list += regions.getScoreboardText()
                     list += getSpacer()
                 }
@@ -398,6 +415,12 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             if (event.instance.worldAge % 2L == 0L) {
                 // Update scoreboard ~10x per second for the "Burn status" title animation
                 binding.update()
+            }
+            if (timeLeft > 0) {
+                timeLeft --
+            } else if (timeLeft == 0) {
+                timeLeft = -1
+                getModule<WinModule>().declareWinner(firefightersTeam)
             }
         }
 
