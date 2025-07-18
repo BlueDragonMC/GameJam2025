@@ -3,8 +3,6 @@ package com.bluedragonmc.games.firefighters
 import com.bluedragonmc.games.firefighters.item.SprayItem
 import com.bluedragonmc.games.firefighters.module.*
 import com.bluedragonmc.server.Game
-import com.bluedragonmc.server.event.GameStartEvent
-import com.bluedragonmc.server.event.PlayerJoinGameEvent
 import com.bluedragonmc.server.module.combat.OldCombatModule
 import com.bluedragonmc.server.module.config.ConfigModule
 import com.bluedragonmc.server.module.gameplay.SidebarModule
@@ -12,10 +10,7 @@ import com.bluedragonmc.server.module.instance.InstanceContainerModule
 import com.bluedragonmc.server.module.instance.InstanceTimeModule
 import com.bluedragonmc.server.module.map.AnvilFileMapProviderModule
 import com.bluedragonmc.server.module.minigame.*
-import com.bluedragonmc.server.module.vanilla.FallDamageModule
-import com.bluedragonmc.server.module.vanilla.ItemDropModule
-import com.bluedragonmc.server.module.vanilla.ItemPickupModule
-import com.bluedragonmc.server.module.vanilla.NaturalRegenerationModule
+import com.bluedragonmc.server.module.vanilla.*
 import com.bluedragonmc.server.utils.*
 import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import net.kyori.adventure.key.Key
@@ -35,7 +30,6 @@ import net.minestom.server.entity.ai.goal.MeleeAttackGoal
 import net.minestom.server.entity.ai.target.ClosestEntityTarget
 import net.minestom.server.entity.attribute.Attribute
 import net.minestom.server.entity.metadata.display.BlockDisplayMeta
-import net.minestom.server.event.EventDispatcher
 import net.minestom.server.event.EventListener
 import net.minestom.server.event.entity.EntityAttackEvent
 import net.minestom.server.event.instance.InstanceTickEvent
@@ -248,6 +242,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
     override fun initialize() {
         use(AnvilFileMapProviderModule(Paths.get("worlds/$name/$mapName")))
         use(ConfigModule())
+        use(DoorsModule())
         use(FallDamageModule())
         use(InstanceContainerModule())
         use(InstanceTimeModule())
@@ -256,12 +251,13 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         use(MOTDModule(motd = Component.translatable("firefighters.motd")))
         use(NaturalRegenerationModule())
         use(OldCombatModule())
-        use(PlayerResetModule(defaultGameMode = GameMode.SURVIVAL))
+        use(PlayerResetModule(defaultGameMode = GameMode.ADVENTURE))
         use(SidebarModule(name))
         use(SpawnpointModule(SpawnpointModule.ConfigSpawnpointProvider()))
         use(SpectatorModule(spectateOnDeath = false, spectateOnLeave = true))
         use(TimedRespawnModule(seconds = 5))
         use(VoidDeathModule(threshold = -60.0))
+        use(VoteStartModule(minPlayers = 1))
 //        use(VoteStartModule(minPlayers = 1, countdownSeconds = 5))
         use(WinModule())
 
@@ -309,14 +305,6 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             it.addCustomItem(EXTINGUISHER)
         }
 
-        handleEvent<PlayerJoinGameEvent> { event ->
-            MinecraftServer.getSchedulerManager().scheduleNextTick {
-                event.player.inventory.addItemStack(FLAMETHROWER.item)
-                event.player.inventory.addItemStack(EXTINGUISHER.item)
-                event.player.inventory.addItemStack(ItemStack.of(Material.FLINT_AND_STEEL))
-            }
-        }
-
         handleEvent<PlayerBlockInteractEvent> { event ->
             if (event.isBlockingItemUse) return@handleEvent
             if ((event.player.getItemInHand(event.hand).material() == Material.FLINT_AND_STEEL) || (event.player.getItemInHand(event.hand).material() == Material.TORCH)) {
@@ -341,7 +329,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         )
         val powerupSpawnPositions = getModule<ConfigModule>().getConfig().node("powerup", "locations").getList(Pos::class.java) ?: listOf()
 
-        use(PowerupModule(powerups, powerupSpawnPositions, spawnAllOnStart = true))
+        use(PowerupModule(powerups, powerupSpawnPositions, spawnRate = Duration.ofSeconds(1), spawnAllOnStart = true))
 
         use(FireSpreadModule(), { System.currentTimeMillis() > explodingUntil })
 
@@ -395,14 +383,6 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                 } else {
                     currentStage = Stage.Stage1()
                 }
-            }
-        }
-
-        handleEvent<PlayerJoinGameEvent> {
-            EventDispatcher.call(GameStartEvent(this))
-            state = GameState.INGAME
-            MinecraftServer.getSchedulerManager().scheduleNextTick {
-                it.player.gameMode = GameMode.CREATIVE
             }
         }
     }

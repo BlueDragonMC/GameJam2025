@@ -3,6 +3,7 @@ package com.bluedragonmc.games.firefighters.module
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.event.GameStartEvent
 import com.bluedragonmc.server.module.GameModule
+import com.bluedragonmc.server.utils.manage
 import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.TextColor
@@ -32,7 +33,7 @@ import kotlin.math.sin
 class PowerupModule(
     private val powerups: Collection<Powerup>,
     private val spawnPositions: Collection<Pos>,
-    private val spawnRate: Duration = Duration.ZERO, // TODO spawn powerups periodically
+    private val spawnRate: Duration = Duration.ZERO,
     private val maxSpawned: Int = spawnPositions.size,
     private val spawnAllOnStart: Boolean = false
 ) : GameModule() {
@@ -43,11 +44,16 @@ class PowerupModule(
             repeat(maxSpawned) {
                 spawnPowerup(powerups.random(), parent.getInstance())
             }
+            if (spawnRate != Duration.ZERO) {
+                MinecraftServer.getSchedulerManager().buildTask {
+                    spawnPowerup(powerups.random(), parent.getInstance())
+                }.schedule().manage(parent)
+            }
         }
 
         MinecraftServer.getSchedulerManager().buildTask {
             if (spawnedPowerups.size < maxSpawned) spawnPowerup(powerups.random(), parent.getInstance())
-        }
+        }.repeat(spawnRate).schedule().manage(parent)
 
         eventNode.addListener(PlayerTickEvent::class.java) { event ->
             if (event.player.gameMode == GameMode.SPECTATOR) return@addListener
@@ -59,13 +65,20 @@ class PowerupModule(
                         return@removeIf true
                     }
                 }
-                false
+                return@removeIf false
             }
         }
     }
 
-    fun spawnPowerup(powerup: Powerup, instance: Instance) =
-        spawnPowerup(powerup, instance, spawnPositions.filter { it !in spawnedPowerups.map { it.position } }.random())
+    fun spawnPowerup(powerup: Powerup, instance: Instance) {
+        val spawnedPowerupPositions = spawnedPowerups.map { it.position }
+        val validSpawnPos = spawnPositions.filter { possibleSpawnPos -> !spawnedPowerupPositions.any { pos -> pos.samePoint(possibleSpawnPos) } }.randomOrNull() ?: return
+        spawnPowerup(
+            powerup,
+            instance,
+            validSpawnPos
+        )
+    }
 
     fun spawnPowerup(powerup: Powerup, instance: Instance, position: Pos) {
         spawnedPowerups.add(SpawnedPowerup(powerup, instance, position))
