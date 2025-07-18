@@ -162,6 +162,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
             override fun advance(parent: FirefightersGame): Stage {
                 parent.getModule<BurnableRegionsModule>().loadFrom(parent, "burnableRegionsStage2")
                 // Stage 1 -> Stage 2
+                val almostBurnedRegions = mutableListOf<BurnableRegionsModule.Region>() // used for the "almost there" chat message
                 val burnedRegions = mutableListOf<BurnableRegionsModule.Region>()
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
                     val regions = parent.getModuleOrNull<BurnableRegionsModule>() ?: return@handler
@@ -171,9 +172,24 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
                     }
                     // Play explosion animation when a region reaches 100% burned
                     for ((i, region) in regions.getRegions().withIndex()) {
+                        if (region.getProportionBurned() >= 0.7 && !almostBurnedRegions.contains(region)) {
+                            parent.expositionChatMessage(
+                                parent.arsonistsTeam, -1, "firefighters.stage_2.player_chat.arsonists.1"
+                            )
+                            parent.expositionChatMessage(
+                                parent.firefightersTeam, -1, "firefighters.stage_2.player_chat.firefighters.1"
+                            )
+                            almostBurnedRegions.add(region)
+                        }
                         if (region.getProportionBurned() >= 0.9 && !burnedRegions.contains(region) && System.currentTimeMillis() > parent.explodingUntil) {
                             burnedRegions.add(region)
                             parent.explodeRegion("burnableRegionsStage2", i)
+                            parent.expositionChatMessage(
+                                parent.arsonistsTeam, -1, "firefighters.stage_2.player_chat.arsonists.2"
+                            )
+                            parent.expositionChatMessage(
+                                parent.firefightersTeam, -1, "firefighters.stage_2.player_chat.firefighters.2"
+                            )
                         }
                     }
                 }.expireWhen { parent.currentStage !is Stage2 }.build())
@@ -200,9 +216,25 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         /** Arsonists trying to spread the fire to the nuclear plant */
         class Stage2 : Stage {
             override fun advance(parent: FirefightersGame): Stage {
-                parent.sendMessage(Component.translatable("firefighters.stage_3.start"))
                 // Stage 2 -> Stage 3
+                parent.sendMessage(
+                    (Component.translatable(
+                        "firefighters.stage_3.start", NamedTextColor.RED, TextDecoration.BOLD
+                    ) + Component.newline() + Component.translatable(
+                        "firefighters.stage_3.start.description", NamedTextColor.GRAY
+                    ).decoration(TextDecoration.BOLD, false)).surroundWithSeparators()
+                )
                 parent.setBiome(RegistryKey.unsafeOf("bluedragonmc:zombie"))
+
+                // Exposition chat messages
+                for (i in 1..3) {
+                    parent.expositionChatMessage(
+                        parent.arsonistsTeam, -1, "firefighters.stage_3.player_chat.arsonists.$i"
+                    )
+                    parent.expositionChatMessage(
+                        parent.firefightersTeam, -1, "firefighters.stage_3.player_chat.firefighters.$i"
+                    )
+                }
 
                 var spawns = 0
                 var task: Task? = null
