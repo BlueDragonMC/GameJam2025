@@ -310,6 +310,7 @@ class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
         use(AnvilFileMapProviderModule(Paths.get("worlds/$name/$mapName")))
         use(ConfigModule())
         use(DoorsModule())
+        use(IronDoorPressurePlateModule())
         use(FallDamageModule())
         use(InstanceContainerModule())
         use(InstanceTimeModule())
