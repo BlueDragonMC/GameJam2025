@@ -22,13 +22,13 @@ class InventoryMovementSpeedModule(val baseSpeed: Double, val slowdownPerItem: D
             event.player.getAttribute(Attribute.MOVEMENT_SPEED).baseValue = newSpeed
         }
         eventNode.addListener(PlayerLeaveGameEvent::class.java) { event ->
-            event.player.getAttribute(Attribute.MOVEMENT_SPEED).baseValue = Attribute.MOVEMENT_SPEED.defaultValue()
+            event.player.getAttribute(Attribute.MOVEMENT_SPEED).baseValue = 0.1
         }
     }
 
     override fun deinitialize() {
         parent.players.forEach { player ->
-            player.getAttribute(Attribute.MOVEMENT_SPEED).baseValue = Attribute.MOVEMENT_SPEED.defaultValue()
+            player.getAttribute(Attribute.MOVEMENT_SPEED).baseValue = 0.1
         }
     }
 }
