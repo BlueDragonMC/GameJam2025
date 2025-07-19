@@ -43,6 +43,7 @@ import net.minestom.server.event.entity.EntityAttackEvent
 import net.minestom.server.event.instance.InstanceTickEvent
 import net.minestom.server.event.player.PlayerDeathEvent
 import net.minestom.server.event.player.PlayerTickEvent
+import net.minestom.server.event.player.PlayerUseItemEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.instance.palette.Palette
 import net.minestom.server.item.ItemStack
@@ -343,6 +344,10 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
         use(WinModule())
         use(CustomDeathMessageModule())
 
+        handleEvent<PlayerUseItemEvent> { event ->
+            // TODO - why does this make it work?? why doesn't the module receive the event on its own???????
+            getModule<CustomItemsModule>().eventNode.call(event) // wtf??
+        }
 
         handleEvent<PlayerJoinGameEvent> {
             MinecraftServer.getSchedulerManager().scheduleNextTick {
