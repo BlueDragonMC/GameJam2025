@@ -52,6 +52,7 @@ import net.minestom.server.network.NetworkBuffer
 import net.minestom.server.network.packet.server.play.ChunkBiomesPacket
 import net.minestom.server.network.packet.server.play.ExplosionPacket
 import net.minestom.server.particle.Particle
+import net.minestom.server.potion.PotionEffect
 import net.minestom.server.registry.RegistryKey
 import net.minestom.server.sound.SoundEvent
 import net.minestom.server.timer.Task
@@ -530,6 +531,8 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
             }
         }
 
+        // Fire Damage
+
         eventNode.addListener(PlayerTickEvent::class.java) { event ->
             val player = event.player
             if (playerOnFire(player)) {
@@ -539,6 +542,19 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
             if (player.isOnFire) {
                 if ((player.aliveTicks % 20).toInt() == 0) {
                     player.damage(DamageType.ON_FIRE, 2.0F)
+                }
+            }
+        }
+
+        // Poison Damage
+
+        eventNode.addListener (PlayerTickEvent::class.java) { event ->
+            val player = event.player
+            if (player.hasEffect(PotionEffect.POISON)) {
+                if ((player.aliveTicks % 20).toInt() == 0) {
+                    if (player.health > 1) {
+                        player.damage(DamageType.MAGIC, 2.0F)
+                    }
                 }
             }
         }
