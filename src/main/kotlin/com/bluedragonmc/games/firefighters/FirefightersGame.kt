@@ -693,7 +693,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
             "water_bucket",
             ItemStack.builder(Material.WATER_BUCKET)
                 .customName(Component.translatable("item.water_bucket", NamedTextColor.DARK_AQUA).noItalic())
-                .set(DataComponents.MAX_DAMAGE, 3)
+                .set(DataComponents.MAX_DAMAGE, 30)
                 .build()
         )
 

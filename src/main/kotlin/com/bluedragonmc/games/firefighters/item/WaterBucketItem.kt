@@ -7,6 +7,7 @@ import net.kyori.adventure.sound.Sound
 import net.minestom.server.coordinate.BlockVec
 import net.minestom.server.coordinate.Vec
 import net.minestom.server.event.player.PlayerBlockInteractEvent
+import net.minestom.server.event.player.PlayerUseItemEvent
 import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
 import net.minestom.server.network.packet.server.play.ParticlePacket
@@ -17,10 +18,23 @@ class WaterBucketItem(override val itemId: String, itemStack: ItemStack) : Custo
 
     val item = addIdentifier(itemStack)
 
+    override fun onUseAir(event: PlayerUseItemEvent) {
+        super.onUseAir(event)
+        val player = event.player
+        player.itemInMainHand = damageItem(player.itemInMainHand, player, 1)
+
+        if (player.fireTicks > 0) {
+            player.fireTicks = 0
+            event.instance.playSound(
+                Sound.sound(SoundEvent.BLOCK_FIRE_EXTINGUISH, Sound.Source.BLOCK, 1.0f, 1.0f), player
+            )
+        }
+    }
+
     override fun onUseBlock(event: PlayerBlockInteractEvent) {
         super.onUseBlock(event)
         val player = event.player
-        player.itemInMainHand = damageItem(player.itemInMainHand, player, 1)
+        player.itemInMainHand = damageItem(player.itemInMainHand, player, 10)
 
         if (player.fireTicks > 0) {
             player.fireTicks = 0
