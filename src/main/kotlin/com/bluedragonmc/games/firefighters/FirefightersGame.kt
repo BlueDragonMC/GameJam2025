@@ -503,7 +503,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                     list += getSpacer()
                     list += Component.text("Arsonists escaped: ", NamedTextColor.GRAY)
                         .append(Component.text(escapedArsonists, NamedTextColor.RED))
-                        .append(Component.text("/${aliveArsonists}", NamedTextColor.GRAY))
+                        .append(Component.text("/${aliveArsonists.size}", NamedTextColor.GRAY))
                 }
 
                 else -> {}

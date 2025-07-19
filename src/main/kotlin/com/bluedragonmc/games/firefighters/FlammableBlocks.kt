@@ -160,8 +160,8 @@ object FlammableBlocks {
         map[Block.YELLOW_WOOL] = 30 to 60
         map[Block.LIME_WOOL] = 30 to 60
         map[Block.PINK_WOOL] = 30 to 60
-        map[Block.GRAY_WOOL] = 0 to 0
-        map[Block.LIGHT_GRAY_WOOL] = 30 to 60
+        map[Block.GRAY_WOOL] = 30 to 60
+        map[Block.LIGHT_GRAY_WOOL] = 0 to 0
         map[Block.CYAN_WOOL] = 30 to 60
         map[Block.PURPLE_WOOL] = 30 to 60
         map[Block.BLUE_WOOL] = 30 to 60
