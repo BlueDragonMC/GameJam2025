@@ -3,7 +3,8 @@ world:
   description: 'An industrial complex with a suspicious lack of security.'
   author: 'BlueDragon Build Team'
   spawnpoints:
-    - 11, -52, 27, 90, 0
+    - -31.5, -52, 41.5, -90, 0
+    - -33.5, -52, 87.5, -180, 0
 burnableRegionsStage1:
   - name: <yellow><lang:firefighters.factory_1> # Weapon Storage
     start: 23, -53, 55

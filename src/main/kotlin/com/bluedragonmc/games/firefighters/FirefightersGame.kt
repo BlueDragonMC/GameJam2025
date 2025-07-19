@@ -7,7 +7,6 @@ import com.bluedragonmc.games.firefighters.item.WaterBucketItem
 import com.bluedragonmc.games.firefighters.module.*
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.event.GameStartEvent
-import com.bluedragonmc.server.event.PlayerJoinGameEvent
 import com.bluedragonmc.server.module.combat.CustomDeathMessageModule
 import com.bluedragonmc.server.module.combat.OldCombatModule
 import com.bluedragonmc.server.module.config.ConfigModule
@@ -331,7 +330,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
         use(OldCombatModule())
         use(PlayerResetModule(defaultGameMode = GameMode.ADVENTURE))
         use(SidebarModule(name))
-        use(SpawnpointModule(SpawnpointModule.ConfigSpawnpointProvider()))
+        use(SpawnpointModule(SpawnpointModule.TeamConfigSpawnpointProvider(allowRandomOrder = false)))
         use(SpectatorModule(spectateOnDeath = false, spectateOnLeave = true))
         use(TimedRespawnModule(seconds = 5), { event ->
             if (event is PlayerDeathEvent) {
@@ -422,7 +421,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                         cutsceneModule.playCutscene(
                             player,
                             this,
-                            arsonistCutscene,
+                            arsonistCutscene, 
                             stepsPerCurve = 10,
                             msPerPoint = 300
                         )
@@ -694,14 +693,14 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
     private companion object {
         val FLINT_AND_STEEL = FireStartingItem(
             "flint_and_steel", ItemStack.builder(Material.FLINT_AND_STEEL)
-                .set(DataComponents.MAX_DAMAGE, 64)
+                .set(DataComponents.MAX_DAMAGE, 20)
                 .build()
         )
         val MATCHES = FireStartingItem(
             "matches",
             ItemStack.builder(Material.TORCH)
                 .set(DataComponents.CUSTOM_NAME, Component.text("Matches", NamedTextColor.RED))
-                .set(DataComponents.MAX_DAMAGE, 30)
+                .set(DataComponents.MAX_DAMAGE, 15)
                 .set(DataComponents.MAX_STACK_SIZE, 1)
                 .build()
         )
@@ -717,7 +716,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
             "extinguisher",
             ItemStack.builder(Material.GLOW_INK_SAC)
                 .customName(Component.translatable("item.extinguisher", NamedTextColor.DARK_AQUA).noItalic())
-                .set(DataComponents.MAX_DAMAGE, 64)
+                .set(DataComponents.MAX_DAMAGE, 128)
                 .set(DataComponents.MAX_STACK_SIZE, 1).build(),
             SprayItem.SprayItemType.FIRE_EXTINGUISH
         )
