@@ -4,7 +4,6 @@ import com.bluedragonmc.example.server.command.JoinCommand
 import com.bluedragonmc.example.server.impl.DatabaseConnectionStub
 import com.bluedragonmc.example.server.impl.EnvironmentStub
 import com.bluedragonmc.example.server.impl.PermissionManagerStub
-import com.bluedragonmc.example.server.impl.SingleGameQueue
 import com.bluedragonmc.example.server.lobby.LobbyGame
 import com.bluedragonmc.games.firefighters.FirefightersGame
 import com.bluedragonmc.server.BRAND_COLOR_PRIMARY_1
@@ -22,6 +21,7 @@ import net.minestom.server.color.Color
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
 import net.minestom.server.extras.MojangAuth
+import net.minestom.server.extras.velocity.VelocityProxy
 import net.minestom.server.tag.Tag
 import net.minestom.server.world.biome.Biome
 import net.minestom.server.world.biome.BiomeEffects
@@ -39,7 +39,13 @@ const val SERVER_PORT = 25565
 fun main() {
     val server = MinecraftServer.init()
     MinecraftServer.getConnectionManager().setPlayerProvider(::CustomPlayer)
-    MojangAuth.init()
+
+    val secret = System.getenv("VELOCITY_SECRET")
+    if (secret != null) {
+        VelocityProxy.enable(secret)
+    } else {
+        MojangAuth.init()
+    }
 
     Permissions.initialize(PermissionManagerStub)
     Messaging.initializeIncoming(IncomingRPCHandlerStub())
