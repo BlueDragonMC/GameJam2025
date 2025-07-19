@@ -35,16 +35,17 @@ class CutsceneModule : GameModule() {
             }
             for ((index, pos) in splinePoints.withIndex()) {
                 MinecraftServer.getSchedulerManager().buildTask {
+                    player.spectate(this)
                     player.teleport(pos)
                     teleport(pos)
                 }.delay(Duration.ofMillis(index * msPerPoint)).schedule().manage(game)
             }
             MinecraftServer.getSchedulerManager().buildTask {
-                player.isInvisible = false
                 player.stopSpectating()
                 remove()
                 player.setGameMode(oldGameMode)
                 player.teleport(oldPosition)
+                player.isInvisible = false
             }.delay(Duration.ofMillis((splinePoints.size + 1) * msPerPoint)).schedule().manage(game)
         }
     }
