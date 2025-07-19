@@ -1,5 +1,6 @@
 package com.bluedragonmc.games.firefighters
 
+import com.bluedragonmc.example.server.GAME_NAME
 import com.bluedragonmc.games.firefighters.item.FireStartingItem
 import com.bluedragonmc.games.firefighters.item.SprayItem
 import com.bluedragonmc.games.firefighters.module.*
@@ -59,7 +60,7 @@ import java.time.Duration
 import kotlin.random.Random
 import kotlin.random.nextInt
 
-class FirefightersGame(mapName: String) : Game("Firefighters", mapName) {
+class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
 
     val firefightersTeam =
         TeamModule.Team(Component.translatable("firefighters.team.firefighters", TextColor.color(252, 50, 50)))
