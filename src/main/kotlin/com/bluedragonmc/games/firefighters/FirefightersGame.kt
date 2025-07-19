@@ -36,6 +36,7 @@ import net.minestom.server.entity.ai.goal.FollowTargetGoal
 import net.minestom.server.entity.ai.goal.MeleeAttackGoal
 import net.minestom.server.entity.ai.target.ClosestEntityTarget
 import net.minestom.server.entity.attribute.Attribute
+import net.minestom.server.entity.damage.Damage
 import net.minestom.server.entity.damage.DamageType
 import net.minestom.server.entity.metadata.display.BlockDisplayMeta
 import net.minestom.server.event.EventListener
@@ -59,6 +60,8 @@ import net.minestom.server.utils.time.TimeUnit
 import net.minestom.server.world.biome.Biome
 import java.nio.file.Paths
 import java.time.Duration
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.random.Random
 import kotlin.random.nextInt
 
@@ -166,8 +169,10 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                 // Stage 1 -> Stage 2
 
                 // Open the iron door to the reactor (lol)
-                parent.getInstance().setBlock(-11,-52,-30, parent.getInstance().getBlock(-11,-52,-30).withProperty("open", "true"))
-                parent.getInstance().setBlock(-11,-51,-30, parent.getInstance().getBlock(-11,-51,-30).withProperty("open", "true"))
+                parent.getInstance()
+                    .setBlock(-11, -52, -30, parent.getInstance().getBlock(-11, -52, -30).withProperty("open", "true"))
+                parent.getInstance()
+                    .setBlock(-11, -51, -30, parent.getInstance().getBlock(-11, -51, -30).withProperty("open", "true"))
 
                 // Observe burned blocks
                 val almostBurnedRegions =
@@ -363,7 +368,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
         handleEvent<EntityAttackEvent> { event ->
             if (event.entity is EntityCreature && event.target is Player && event.entity.entityType == EntityType.ZOMBIE) {
                 (event.target as Player).health -= 2
-                val delta = event.target.position.sub(event.entity.position).toVec().normalize()
+                val delta = event.entity.position.sub(event.target.position).toVec().normalize()
                 OldCombatModule.takeKnockback(delta.x, delta.y, event.target, 0.5)
             }
         }
@@ -580,6 +585,25 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
             )
         }
         MinecraftServer.getSchedulerManager().buildTask {
+            // Actually do the explosion
+
+            // First, kill every player inside the factory
+            val minimum = BlockVec(
+                min(pos1.blockX(), pos2.blockX()),
+                min(pos1.blockY(), pos2.blockY()),
+                min(pos1.blockZ(), pos2.blockZ())
+            )
+            val maximum = BlockVec(
+                max(pos1.blockX(), pos2.blockX()),
+                max(pos1.blockY(), pos2.blockY()),
+                max(pos1.blockZ(), pos2.blockZ())
+            )
+            for (player in players) {
+                if (player.position.x in (minimum.x..maximum.x) && player.position.y in (minimum.y..maximum.y) && player.position.z in (minimum.z..maximum.z)) {
+                    player.damage(Damage(DamageType.EXPLOSION, null, null, null, Float.MAX_VALUE))
+                }
+            }
+
             // For each block, have a chance of turning into an entity and exploding and a chance of just disappearing
             val centerPos = Vec((pos1.x + pos2.x) / 2, pos1.y.coerceAtMost(pos2.y) - 5, (pos1.z + pos2.z) / 2)
 
