@@ -175,14 +175,20 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                     .setBlock(-11, -51, -30, parent.getInstance().getBlock(-11, -51, -30).withProperty("open", "true"))
 
                 // Play a cutscene that shows the reactor
-                val points = parent.getModule<ConfigModule>().getConfig().node("stage2RevealCutscene")?.getList(Pos::class.java)
-                if (points != null && !points.isEmpty()) {
-                    for (player in parent.players) {
-                        parent.getModule<CutsceneModule>().playCutscene(
-                            player, parent, points, msPerPoint = 250, stepsPerCurve = 5
-                        )
+                var playedRevealCutscene = false
+                parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
+                    if (System.currentTimeMillis() > parent.explodingUntil) { // Wait until previous cutscene finishes playing
+                        playedRevealCutscene = true
+                        val points = parent.getModule<ConfigModule>().getConfig().node("stage2RevealCutscene")?.getList(Pos::class.java)
+                        if (points != null && !points.isEmpty()) {
+                            for (player in parent.players) {
+                                parent.getModule<CutsceneModule>().playCutscene(
+                                    player, parent, points, msPerPoint = 250, stepsPerCurve = 5
+                                )
+                            }
+                        }
                     }
-                }
+                }.expireWhen { playedRevealCutscene }.build())
 
                 // Observe burned blocks
                 val almostBurnedRegions =
