@@ -35,7 +35,7 @@ burnableRegionsStage1:
 burnableRegionsStage2:
   - name: <#acfc8d><lang:firefighters.reactor_core>
     start: -1, -51, -30
-    end: -23, -15, -54
+    end: -21, -14, -53
     cutscene:
       - -98, -41, -65.5, -90, 20
       - -114, -38 -65.5, -90, 15
