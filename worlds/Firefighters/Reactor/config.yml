@@ -57,6 +57,15 @@ powerup:
     - -45, -52, -34 # admin building, bottom
     - -36, -47, -32 # admin building, top
     - -48.5, -52, -3.5 # turbine building
+    - 26, -51, 62 # outside weapon storage
+    - 10.5, -51, -4.5 # in cooling tower
+    - -35.5, -51, -53.5 # outside comms building under cherry trees
+    - -58.5, -51, -49.5 # outside food storage on path to comms building
+    - -4.5, -48.5, -76.5 # on bridge to north fire station
+    - 14.5, -50, -55.5 # at warren r. monger laboratories
+    - 58.5, -48.5, -13.5 # on bridge to east fire station
+    - -4.5, -51, 49.5 # west of fuel storage on the way to the south bridge
+    - -37.5, -48.5, 61.5 # on bridge to south fire station
 introCutscene:
   firefighter:
     - -29.5, -50, 72.5, 0, 0 # firehouse
