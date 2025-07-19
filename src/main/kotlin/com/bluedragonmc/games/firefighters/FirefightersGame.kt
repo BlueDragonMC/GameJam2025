@@ -174,6 +174,16 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                 parent.getInstance()
                     .setBlock(-11, -51, -30, parent.getInstance().getBlock(-11, -51, -30).withProperty("open", "true"))
 
+                // Play a cutscene that shows the reactor
+                val points = parent.getModule<ConfigModule>().getConfig().node("stage2RevealCutscene")?.getList(Pos::class.java)
+                if (points != null && !points.isEmpty()) {
+                    for (player in parent.players) {
+                        parent.getModule<CutsceneModule>().playCutscene(
+                            player, parent, points, msPerPoint = 250, stepsPerCurve = 5
+                        )
+                    }
+                }
+
                 // Observe burned blocks
                 val almostBurnedRegions =
                     mutableListOf<BurnableRegionsModule.Region>() // used for the "almost there" chat message
