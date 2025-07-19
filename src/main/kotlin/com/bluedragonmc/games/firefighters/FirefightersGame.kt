@@ -615,7 +615,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
      * Returns whether an arsonist has "escaped" the nuclear fallout.
      * TODO: make configurable
      */
-    fun hasEscaped(it: Player) = (it.position.x < -120 && it.position.blockZ() in (0..105)) ||
+    fun hasEscaped(it: Player) = it.gameMode != GameMode.SPECTATOR && (it.position.x < -120 && it.position.blockZ() in (0..105)) ||
             (it.position.x < -140 && it.position.blockZ() in (-40..0))
 
     fun explodeRegion(configKey: String, index: Int) {
