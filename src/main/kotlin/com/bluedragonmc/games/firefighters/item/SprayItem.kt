@@ -2,14 +2,17 @@ package com.bluedragonmc.games.firefighters.item
 
 import com.bluedragonmc.games.firefighters.module.CustomItem
 import com.bluedragonmc.games.firefighters.module.FireSpreadModule
+import com.bluedragonmc.server.module.combat.OldCombatModule
 import com.bluedragonmc.server.utils.toVec
 import net.kyori.adventure.sound.Sound
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Point
 import net.minestom.server.coordinate.Pos
+import net.minestom.server.entity.LivingEntity
 import net.minestom.server.entity.Player
 import net.minestom.server.event.player.PlayerBlockInteractEvent
 import net.minestom.server.event.player.PlayerUseItemEvent
+import net.minestom.server.instance.EntityTracker
 import net.minestom.server.instance.Instance
 import net.minestom.server.instance.block.Block
 import net.minestom.server.item.ItemStack
@@ -32,6 +35,16 @@ class SprayItem(override val itemId: String, item: ItemStack, private val sprayI
 
     override fun onUseAir(event: PlayerUseItemEvent) {
         spray(event.player)
+
+        var point = event.player.position
+        repeat(12) { i ->
+            point = point.add(event.player.position.direction().div(4.0))
+            event.instance.entityTracker.nearbyEntities(point, 0.1 + 0.03 * i, EntityTracker.Target.ENTITIES) { target ->
+                if (target == event.player || target !is LivingEntity) return@nearbyEntities
+                val kb = event.player.position.direction()
+                OldCombatModule.takeKnockback(kb.x, kb.z, target, 0.1)
+            }
+        }
     }
 
     override fun onUseBlock(event: PlayerBlockInteractEvent) {

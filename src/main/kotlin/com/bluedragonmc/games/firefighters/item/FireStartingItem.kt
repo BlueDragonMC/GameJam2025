@@ -34,8 +34,6 @@ class FireStartingItem(override val itemId: String, itemStack: ItemStack) : Cust
 
         val player = event.player
 
-        player.itemInMainHand = damageItem(player.itemInMainHand, player, 1)
-
         val direction = event.blockFace.toDirection()
         val blockPos = event.blockPosition.add(direction)
         if (event.instance.getBlock(
@@ -43,6 +41,7 @@ class FireStartingItem(override val itemId: String, itemStack: ItemStack) : Cust
             ).isAir && FireSpreadModule.hasFullAdjacentFace(event.instance, blockPos)
         ) {
             event.instance.setBlock(blockPos, Block.FIRE)
+            player.itemInMainHand = damageItem(player.itemInMainHand, player, 1)
         }
     }
 }
