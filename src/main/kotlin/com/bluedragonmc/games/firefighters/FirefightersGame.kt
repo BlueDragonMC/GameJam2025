@@ -207,7 +207,13 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                         }
                         if (region.getProportionBurned() >= 0.9 && !burnedRegions.contains(region) && System.currentTimeMillis() > parent.explodingUntil) {
                             burnedRegions.add(region)
-                            parent.explodeRegion("burnableRegionsStage2", i)
+                            for (player in parent.players) {
+                                // Teleport players out of the reactor so they don't die as soon as the explosion animation starts
+                                player.teleport(Pos(-10.0, -52.0, -20.0, -180.0f, 0.0f))
+                            }
+                            MinecraftServer.getSchedulerManager().scheduleNextTick {
+                                parent.explodeRegion("burnableRegionsStage2", i)
+                            }
                             parent.expositionChatMessage(
                                 parent.arsonistsTeam, -1, "firefighters.stage_2.player_chat.arsonists.2"
                             )
@@ -596,6 +602,18 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
         val pos1 = region.node("start").get(Pos::class.java) ?: return
         val pos2 = region.node("end").get(Pos::class.java) ?: return
 
+        val minimum = BlockVec(
+            min(pos1.blockX(), pos2.blockX()),
+            min(pos1.blockY(), pos2.blockY()),
+            min(pos1.blockZ(), pos2.blockZ())
+        )
+        val maximum = BlockVec(
+            max(pos1.blockX(), pos2.blockX()),
+            max(pos1.blockY(), pos2.blockY()),
+            max(pos1.blockZ(), pos2.blockZ())
+        )
+        val playersToKill = players.filter { player -> player.position.x in (minimum.x..maximum.x) && player.position.y in (minimum.y..maximum.y) && player.position.z in (minimum.z..maximum.z) }
+
         explodingUntil = System.currentTimeMillis() + msPerPoint * stepsPerCurve * points.size
 
         for (player in players) {
@@ -607,20 +625,8 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
             // Actually do the explosion
 
             // First, kill every player inside the factory
-            val minimum = BlockVec(
-                min(pos1.blockX(), pos2.blockX()),
-                min(pos1.blockY(), pos2.blockY()),
-                min(pos1.blockZ(), pos2.blockZ())
-            )
-            val maximum = BlockVec(
-                max(pos1.blockX(), pos2.blockX()),
-                max(pos1.blockY(), pos2.blockY()),
-                max(pos1.blockZ(), pos2.blockZ())
-            )
-            for (player in players) {
-                if (player.position.x in (minimum.x..maximum.x) && player.position.y in (minimum.y..maximum.y) && player.position.z in (minimum.z..maximum.z)) {
-                    player.damage(Damage(DamageType.EXPLOSION, null, null, null, Float.MAX_VALUE))
-                }
+            for (player in playersToKill) {
+                player.damage(Damage(DamageType.EXPLOSION, null, null, null, Float.MAX_VALUE))
             }
 
             // For each block, have a chance of turning into an entity and exploding and a chance of just disappearing
