@@ -420,7 +420,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                             this,
                             firefighterCutscene,
                             stepsPerCurve = 10,
-                            msPerPoint = 100
+                            msPerPoint = 300
                         )
                     }
                 if (arsonistCutscene != null)
@@ -430,7 +430,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                             this,
                             arsonistCutscene,
                             stepsPerCurve = 10,
-                            msPerPoint = 100
+                            msPerPoint = 300
                         )
                     }
             }
@@ -696,7 +696,6 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
         val targetBlock = instance.getBlock(playerPosition)
         return Block.FIRE.compare(targetBlock)
     }
-
 
     private companion object {
         val FLINT_AND_STEEL = FireStartingItem(
