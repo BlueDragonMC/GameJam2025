@@ -272,6 +272,22 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                     )
                 }
 
+                // Play a cutscene that shows the village
+                var playedVillageCutscene = false
+                parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
+                    if (System.currentTimeMillis() > parent.explodingUntil) { // Wait until previous cutscene finishes playing
+                        playedVillageCutscene = true
+                        val points = parent.getModule<ConfigModule>().getConfig().node("stage3RevealCutscene")?.getList(Pos::class.java)
+                        if (points != null && !points.isEmpty()) {
+                            for (player in parent.players) {
+                                parent.getModule<CutsceneModule>().playCutscene(
+                                    player, parent, points, msPerPoint = 250, stepsPerCurve = 5
+                                )
+                            }
+                        }
+                    }
+                }.expireWhen { playedVillageCutscene }.build())
+
                 var spawns = 0
                 var task: Task? = null
                 task = MinecraftServer.getSchedulerManager().buildTask {
