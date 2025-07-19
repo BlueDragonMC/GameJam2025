@@ -2,6 +2,7 @@ package com.bluedragonmc.games.firefighters.module
 
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.module.GameModule
+import com.bluedragonmc.server.module.minigame.PlayerResetModule
 import com.bluedragonmc.server.utils.manage
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Pos
@@ -43,7 +44,7 @@ class CutsceneModule : GameModule() {
             MinecraftServer.getSchedulerManager().buildTask {
                 player.stopSpectating()
                 remove()
-                player.setGameMode(oldGameMode)
+                player.setGameMode(game.getModuleOrNull<PlayerResetModule>()?.defaultGameMode ?: oldGameMode)
                 player.teleport(oldPosition)
                 player.isInvisible = false
             }.delay(Duration.ofMillis((splinePoints.size + 1) * msPerPoint)).schedule().manage(game)
