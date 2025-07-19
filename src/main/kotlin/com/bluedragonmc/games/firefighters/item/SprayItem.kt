@@ -39,7 +39,7 @@ class SprayItem(override val itemId: String, item: ItemStack, private val sprayI
         var point = event.player.position
         repeat(16) { i ->
             point = point.add(event.player.position.direction().div(4.0))
-            event.instance.entityTracker.nearbyEntities(point, 0.1 + 0.04 * i, EntityTracker.Target.ENTITIES) { target ->
+            event.instance.entityTracker.nearbyEntities(point.add(0.0, -1.0, 0.0), 0.1 + 0.04 * i, EntityTracker.Target.ENTITIES) { target ->
                 if (target == event.player || target !is LivingEntity) return@nearbyEntities
                 val kb = event.player.position.direction()
                 OldCombatModule.takeKnockback(-kb.x, -kb.z, target, 0.2)
