@@ -5,7 +5,6 @@ import com.bluedragonmc.games.firefighters.module.FireSpreadModule
 import com.bluedragonmc.server.utils.toVec
 import net.kyori.adventure.sound.Sound
 import net.minestom.server.MinecraftServer
-import net.minestom.server.component.DataComponents
 import net.minestom.server.coordinate.Point
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.entity.Player
@@ -40,19 +39,7 @@ class SprayItem(override val itemId: String, item: ItemStack, private val sprayI
     }
 
     private fun spray(player: Player) {
-
-        val damage = player.itemInMainHand.get(DataComponents.DAMAGE, 0)
-
-        if (damage > item.get(DataComponents.MAX_DAMAGE, Integer.MAX_VALUE)) {
-            player.itemInMainHand = ItemStack.AIR
-            player.playSound(Sound.sound(SoundEvent.ENTITY_ITEM_BREAK, Sound.Source.PLAYER, 1.0f, 1.0f))
-            return
-        } else {
-            player.itemInMainHand = player.itemInMainHand.with(
-                DataComponents.DAMAGE,
-                damage + SPRAYS_PER_ACTION
-            )
-        }
+        player.itemInMainHand = damageItem(player.itemInMainHand, player, SPRAYS_PER_ACTION)
 
         repeat(SPRAYS_PER_ACTION) { i ->
             MinecraftServer.getSchedulerManager().buildTask {

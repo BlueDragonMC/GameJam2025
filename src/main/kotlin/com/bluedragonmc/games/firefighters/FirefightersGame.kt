@@ -3,6 +3,7 @@ package com.bluedragonmc.games.firefighters
 import com.bluedragonmc.example.server.GAME_NAME
 import com.bluedragonmc.games.firefighters.item.FireStartingItem
 import com.bluedragonmc.games.firefighters.item.SprayItem
+import com.bluedragonmc.games.firefighters.item.WaterBucketItem
 import com.bluedragonmc.games.firefighters.module.*
 import com.bluedragonmc.server.Game
 import com.bluedragonmc.server.event.GameStartEvent
@@ -393,6 +394,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
             it.addCustomItem(EXTINGUISHER)
             it.addCustomItem(FLINT_AND_STEEL)
             it.addCustomItem(MATCHES)
+            it.addCustomItem(WATER_BUCKET)
         }
 
         use(CutsceneModule()) { cutsceneModule ->
@@ -427,7 +429,8 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
             FLAMETHROWER.item.asPowerup(arsonistsTeam, NamedTextColor.RED),
             FLINT_AND_STEEL.item.asPowerup(arsonistsTeam, NamedTextColor.RED),
             MATCHES.item.asPowerup(arsonistsTeam, NamedTextColor.RED),
-            EXTINGUISHER.item.asPowerup(firefightersTeam, NamedTextColor.AQUA)
+            EXTINGUISHER.item.asPowerup(firefightersTeam, NamedTextColor.AQUA),
+            WATER_BUCKET.item.asPowerup(firefightersTeam, NamedTextColor.AQUA)
         )
         val powerupSpawnPositions =
             getModule<ConfigModule>().getConfig().node("powerup", "locations").getList(Pos::class.java) ?: listOf()
@@ -680,6 +683,15 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                 .set(DataComponents.MAX_STACK_SIZE, 1).build(),
             SprayItem.SprayItemType.FIRE_EXTINGUISH
         )
+
+        val WATER_BUCKET = WaterBucketItem(
+            "water_bucket",
+            ItemStack.builder(Material.WATER_BUCKET)
+                .customName(Component.translatable("item.water_bucket", NamedTextColor.DARK_AQUA).noItalic())
+                .set(DataComponents.MAX_DAMAGE, 3)
+                .build()
+        )
+
 
         fun ItemStack.asPowerup(team: TeamModule.Team? = null, glowColor: NamedTextColor) = PowerupModule.Powerup(
             name = get(DataComponents.CUSTOM_NAME) ?: Component.translatable(material().registry().translationKey()),
