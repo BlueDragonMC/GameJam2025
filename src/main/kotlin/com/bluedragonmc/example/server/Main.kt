@@ -1,9 +1,11 @@
 package com.bluedragonmc.example.server
 
+import com.bluedragonmc.example.server.command.JoinCommand
 import com.bluedragonmc.example.server.impl.DatabaseConnectionStub
 import com.bluedragonmc.example.server.impl.EnvironmentStub
 import com.bluedragonmc.example.server.impl.PermissionManagerStub
 import com.bluedragonmc.example.server.impl.SingleGameQueue
+import com.bluedragonmc.example.server.lobby.LobbyGame
 import com.bluedragonmc.games.firefighters.FirefightersGame
 import com.bluedragonmc.server.BRAND_COLOR_PRIMARY_1
 import com.bluedragonmc.server.CustomPlayer
@@ -25,9 +27,12 @@ import net.minestom.server.world.biome.Biome
 import net.minestom.server.world.biome.BiomeEffects
 
 val GAME_CLASS = FirefightersGame::class
+val LOBBY_CLASS = LobbyGame::class
 
+const val GAME_NAME = "Firefighters"
 /** The name of the map folder in worlds/gameName/ */
 const val MAP_NAME = "Reactor"
+const val LOBBY_MAP_NAME = "Lobby"
 const val SERVER_ADDRESS = "0.0.0.0"
 const val SERVER_PORT = 25565
 
@@ -43,14 +48,16 @@ fun main() {
     Environment.setEnvironment(EnvironmentStub)
     GlobalTranslation.hook()
 
-    // Create a game so it's ready as soon as the server starts
-    SingleGameQueue.newGameInstance()
+    MinecraftServer.getCommandManager().register(JoinCommand)
 
-    // Create an instance for players to spawn in even when the game is not loaded
-    val spawningInstance = MinecraftServer.getInstanceManager().createInstanceContainer()
-    // Prevent the game library from automatically removing the spawning instance
-    val tag = Tag.Long("instance_inactive_since")
-    spawningInstance.setTag(tag, Long.MAX_VALUE)
+    // Create a lobby to use for the server's entire lifetime
+    val lobby = LOBBY_CLASS.constructors.first().call("Lobby").apply {
+        init()
+
+        // Prevent the game library from automatically removing the spawning instance
+        val tag = Tag.Long("instance_inactive_since")
+        getInstance().setTag(tag, Long.MAX_VALUE)
+    }
 
     MinecraftServer.getBiomeRegistry().register(
         "bluedragonmc:zombie",
@@ -68,11 +75,8 @@ fun main() {
         GlobalBlockHandlers.hook()
         GlobalChatFormat.hook(eventHandler)
         eventHandler.addListener(AsyncPlayerConfigurationEvent::class.java) { event ->
-            event.spawningInstance = spawningInstance
+            event.spawningInstance = lobby.getInstance()
             event.player.displayName = Component.text(event.player.username, BRAND_COLOR_PRIMARY_1)
-        }
-        eventHandler.addListener(PlayerSpawnEvent::class.java) { event ->
-            if (event.isFirstSpawn) SingleGameQueue.queue(event.player)
         }
     }
 

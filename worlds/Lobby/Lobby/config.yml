@@ -1,0 +1,6 @@
+world:
+  name: Reactor
+  description: 'An industrial complex with a suspicious lack of security.'
+  author: 'BlueDragon Build Team'
+  spawnpoints:
+    - -29.5, -52, 89.5, 180, 0
