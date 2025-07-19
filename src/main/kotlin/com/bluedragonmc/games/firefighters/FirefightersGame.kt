@@ -10,6 +10,7 @@ import com.bluedragonmc.server.event.GameStartEvent
 import com.bluedragonmc.server.module.combat.CustomDeathMessageModule
 import com.bluedragonmc.server.module.combat.OldCombatModule
 import com.bluedragonmc.server.module.config.ConfigModule
+import com.bluedragonmc.server.module.gameplay.InventoryPermissionsModule
 import com.bluedragonmc.server.module.gameplay.SidebarModule
 import com.bluedragonmc.server.module.instance.InstanceContainerModule
 import com.bluedragonmc.server.module.instance.InstanceTimeModule
@@ -41,6 +42,7 @@ import net.minestom.server.entity.metadata.display.BlockDisplayMeta
 import net.minestom.server.event.EventListener
 import net.minestom.server.event.entity.EntityAttackEvent
 import net.minestom.server.event.instance.InstanceTickEvent
+import net.minestom.server.event.item.ItemDropEvent
 import net.minestom.server.event.player.PlayerDeathEvent
 import net.minestom.server.event.player.PlayerTickEvent
 import net.minestom.server.event.player.PlayerUseItemEvent
@@ -175,14 +177,21 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                     .setBlock(-11, -51, -30, parent.getInstance().getBlock(-11, -51, -30).withProperty("open", "true"))
 
                 // Play a cutscene that shows the reactor
-                val points = parent.getModule<ConfigModule>().getConfig().node("stage2RevealCutscene")?.getList(Pos::class.java)
-                if (points != null && !points.isEmpty()) {
-                    for (player in parent.players) {
-                        parent.getModule<CutsceneModule>().playCutscene(
-                            player, parent, points, msPerPoint = 250, stepsPerCurve = 5
-                        )
+                var playedRevealCutscene = false
+                parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
+                    if (System.currentTimeMillis() > parent.explodingUntil) { // Wait until previous cutscene finishes playing
+                        playedRevealCutscene = true
+                        val points = parent.getModule<ConfigModule>().getConfig().node("stage2RevealCutscene")
+                            ?.getList(Pos::class.java)
+                        if (points != null && !points.isEmpty()) {
+                            for (player in parent.players) {
+                                parent.getModule<CutsceneModule>().playCutscene(
+                                    player, parent, points, msPerPoint = 250, stepsPerCurve = 5
+                                )
+                            }
+                        }
                     }
-                }
+                }.expireWhen { playedRevealCutscene }.build())
 
                 // Observe burned blocks
                 val almostBurnedRegions =
@@ -265,6 +274,23 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                         parent.firefightersTeam, -1, "firefighters.stage_3.player_chat.firefighters.$i"
                     )
                 }
+
+                // Play a cutscene that shows the village
+                var playedVillageCutscene = false
+                parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
+                    if (System.currentTimeMillis() > parent.explodingUntil) { // Wait until previous cutscene finishes playing
+                        playedVillageCutscene = true
+                        val points = parent.getModule<ConfigModule>().getConfig().node("stage3RevealCutscene")
+                            ?.getList(Pos::class.java)
+                        if (points != null && !points.isEmpty()) {
+                            for (player in parent.players) {
+                                parent.getModule<CutsceneModule>().playCutscene(
+                                    player, parent, points, msPerPoint = 250, stepsPerCurve = 5
+                                )
+                            }
+                        }
+                    }
+                }.expireWhen { playedVillageCutscene }.build())
 
                 var spawns = 0
                 var task: Task? = null
@@ -364,6 +390,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
 //        use(VoteStartModule(minPlayers = 1, countdownSeconds = 5))
         use(WinModule())
         use(CustomDeathMessageModule())
+        use(InventoryPermissionsModule(allowDropItem = false, allowMoveItem = false), { _ -> state != GameState.INGAME })
 
         handleEvent<PlayerUseItemEvent> { event ->
             // TODO - why does this make it work?? why doesn't the module receive the event on its own???????
@@ -437,7 +464,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                         cutsceneModule.playCutscene(
                             player,
                             this,
-                            arsonistCutscene, 
+                            arsonistCutscene,
                             stepsPerCurve = 10,
                             msPerPoint = 300
                         )
@@ -562,7 +589,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
 
         // Poison Damage
 
-        eventNode.addListener (PlayerTickEvent::class.java) { event ->
+        eventNode.addListener(PlayerTickEvent::class.java) { event ->
             val player = event.player
             if (player.hasEffect(PotionEffect.POISON)) {
                 if ((player.aliveTicks % 20).toInt() == 0) {
@@ -588,8 +615,8 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
      * Returns whether an arsonist has "escaped" the nuclear fallout.
      * TODO: make configurable
      */
-    fun hasEscaped(it: Player) = (it.position.x > -120 && it.position.blockZ() in (0..105)) ||
-            (it.position.x > -140 && it.position.blockZ() in (-40..0))
+    fun hasEscaped(it: Player) = (it.position.x < -120 && it.position.blockZ() in (0..105)) ||
+            (it.position.x < -140 && it.position.blockZ() in (-40..0))
 
     fun explodeRegion(configKey: String, index: Int) {
         val stepsPerCurve = 7
@@ -612,7 +639,8 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
             max(pos1.blockY(), pos2.blockY()),
             max(pos1.blockZ(), pos2.blockZ())
         )
-        val playersToKill = players.filter { player -> player.position.x in (minimum.x..maximum.x) && player.position.y in (minimum.y..maximum.y) && player.position.z in (minimum.z..maximum.z) }
+        val playersToKill =
+            players.filter { player -> player.position.x in (minimum.x..maximum.x) && player.position.y in (minimum.y..maximum.y) && player.position.z in (minimum.z..maximum.z) }
 
         explodingUntil = System.currentTimeMillis() + msPerPoint * stepsPerCurve * points.size
 
