@@ -282,7 +282,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                             .build()
                     )
 
-                    if (spawns++ > 100) {
+                    if (spawns++ > 200) {
                         task!!.cancel()
                     }
                 }.repeat(Duration.of(1, TimeUnit.SERVER_TICK)).schedule()
