@@ -132,7 +132,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
                     // Advance to next stage when all flammable blocks are gone
                     val regions = parent.getModuleOrNull<BurnableRegionsModule>() ?: return@handler
-                    if (regions.getFlammableBlocksRemaining() == 0) {
+                    if (burnedRegions.size == regions.getRegions().size) {
                         parent.currentStage = parent.currentStage.advance(parent)
                     }
                     // Play explosion animation when a region reaches 100% burned
@@ -182,7 +182,7 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
                 parent.handleEvent(EventListener.builder(InstanceTickEvent::class.java).handler {
                     val regions = parent.getModuleOrNull<BurnableRegionsModule>() ?: return@handler
                     // Advance to next stage when all flammable blocks are gone
-                    if (regions.getFlammableBlocksRemaining() == 0) {
+                    if (burnedRegions.size == regions.getRegions().size) {
                         parent.currentStage = parent.currentStage.advance(parent)
                     }
                     // Play explosion animation when a region reaches 100% burned
@@ -353,12 +353,6 @@ class FirefightersGame(mapName: String) : Game(GAME_NAME, mapName) {
         handleEvent<PlayerUseItemEvent> { event ->
             // TODO - why does this make it work?? why doesn't the module receive the event on its own???????
             getModule<CustomItemsModule>().eventNode.call(event) // wtf??
-        }
-
-        handleEvent<PlayerJoinGameEvent> {
-            MinecraftServer.getSchedulerManager().scheduleNextTick {
-                it.player.gameMode = GameMode.ADVENTURE
-            }
         }
 
         use(TeamModule(allowFriendlyFire = false)) { teamModule ->
